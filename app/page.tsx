@@ -9,42 +9,44 @@ import { signIn } from "next-auth/react";
 import { useSession } from "next-auth/react";
 
 export default function Page() {
-  const { data: session } = useSession(); // login status
+  const { data: session } = useSession();
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<"application" | "portfolio" | null>(null);
   const [showLogin, setShowLogin] = useState(false);
   const [currentImage, setCurrentImage] = useState(0);
 
   const images = {
-  application: [
-    "/assets/applicationform/Application Page 1.jpg",
-    "/assets/applicationform/Application Page 2.jpg",
-    "/assets/applicationform/Application Page 3.jpg",
-    "/assets/applicationform/Application Page 4.jpg",
-    "/assets/applicationform/Application Page 5.jpg",
-  ],
-  portfolio: [
-    "/assets/portfolioform/Portfolio Page 1.jpg",
-    "/assets/portfolioform/Portfolio Page 2.jpg",
-  ],
-};
+    application: [
+      "/assets/applicationform/Application Page 1.jpg",
+      "/assets/applicationform/Application Page 2.jpg",
+      "/assets/applicationform/Application Page 3.jpg",
+      "/assets/applicationform/Application Page 4.jpg",
+      "/assets/applicationform/Application Page 5.jpg",
+    ],
+    portfolio: [
+      "/assets/portfolioform/Portfolio Page 1.jpg",
+      "/assets/portfolioform/Portfolio Page 2.jpg",
+    ],
+  };
 
-  // Application Form click
+  // Application Form
   const handleApplicationClick = () => {
     if (session) {
-      window.location.href = "/appform"; // real form page
+      window.location.href = "/appform"; 
     } else {
       setModalType("application");
+      setCurrentImage(0);
       setShowModal(true);
     }
   };
 
-  // Portfolio Form click
+  // Portfolio Form
   const handlePortfolioClick = () => {
     if (session) {
-      window.location.href = "/portfolioform"; // adjust to your real route
+      window.location.href = "/portform"; 
     } else {
       setModalType("portfolio");
+      setCurrentImage(0);
       setShowModal(true);
     }
   };
@@ -71,12 +73,10 @@ export default function Page() {
             <div className="flex">
               {/* Left Side */}
               <div className="w-1/2 bg-gradient-to-br from-slate-800 via-gray-900 to-black p-12 flex flex-col justify-center items-center text-white relative">
-                {/* Background Pattern */}
                 <div className="absolute inset-0 opacity-10">
                   <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-yellow-400 rounded-full blur-2xl"></div>
                 </div>
 
-                {/* Logo & Title */}
                 <div className="relative z-10 text-center mb-8">
                   <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-xl mb-6 mx-auto">
                     <img
@@ -107,7 +107,6 @@ export default function Page() {
 
               {/* Right Side */}
               <div className="w-1/2 bg-white p-12 relative">
-                {/* Close Button */}
                 <button
                   onClick={() => setShowLogin(false)}
                   className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200"
@@ -115,13 +114,11 @@ export default function Page() {
                   ✕
                 </button>
 
-                {/* Welcome Section */}
                 <div className="text-center mb-8">
                   <h2 className="text-3xl font-bold text-gray-800 mb-2">Welcome !</h2>
                   <p className="text-gray-600 text-sm">Sign in to continue to ETEEAP</p>
                 </div>
 
-                {/* Google Login */}
                 <form className="space-y-4">
                   <div className="flex flex-col gap-3 mt-6">
                     <button
@@ -143,102 +140,95 @@ export default function Page() {
           </div>
         </div>
       )}
-       
+
       {/* Who Can Enroll Section */}
-      <WhoCanEnroll/>
+      <WhoCanEnroll />
 
       {/* Assessment Procedure Section */}
-      <Assessment/>
+      <Assessment />
 
       {/* Application / Portfolio Form */}
       <section id="application" className="bg-white py-10">
-          <div className="container mx-auto flex justify-center gap-6">
-            {/* Application Form Button */}
-            <button
-              onClick={handleApplicationClick}
-              className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold py-4 px-8 rounded-xl hover:from-yellow-300 hover:to-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl"
-            >
-              <span className="relative z-10 text-lg">Application Form</span>
-              <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-            </button>
+        <div className="container mx-auto flex justify-center gap-6">
+          {/* Application Form Button */}
+          <button
+            onClick={handleApplicationClick}
+            className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold py-4 px-8 rounded-xl hover:from-yellow-300 hover:to-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl"
+          >
+            <span className="relative z-10 text-lg">Application Form</span>
+            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+          </button>
 
-            {/* Portfolio Form Button */}
-            <button
-              onClick={() => {
-                setModalType("portfolio");
-                setCurrentImage(0);
-                setShowModal(true);
-              }}
-              className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold py-4 px-8 rounded-xl hover:from-yellow-300 hover:to-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl"
-            >
-              <span className="relative z-10 text-lg">Portfolio Form</span>
-              <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
-            </button>
-          </div>
+          {/* Portfolio Form Button */}
+          <button
+            onClick={handlePortfolioClick}
+            className="group relative overflow-hidden bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold py-4 px-8 rounded-xl hover:from-yellow-300 hover:to-yellow-400 transition-all duration-300 transform hover:scale-105 shadow-xl hover:shadow-2xl"
+          >
+            <span className="relative z-10 text-lg">Portfolio Form</span>
+            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+          </button>
+        </div>
 
-          {/* Shared Modal */}
-            {showModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
-                <div className="bg-white p-6 rounded-xl shadow-lg max-w-3xl w-full relative">
-                  <h2 className="text-xl font-bold mb-4 text-center">
-                    {modalType === "application"
-                      ? "Application Form (Preview)"
-                      : "Portfolio Form (Preview)"}
-                  </h2>
-                  <p className="mb-4 text-gray-600 text-center">
-                    Please log in to fill out the form. This is only a preview.
-                  </p>
+        {/* Shared Modal */}
+        {showModal && modalType && (
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded-xl shadow-lg max-w-3xl w-full relative">
+              <h2 className="text-xl font-bold mb-4 text-center">
+                {modalType === "application"
+                  ? "Application Form (Preview)"
+                  : "Portfolio Form (Preview)"}
+              </h2>
+              <p className="mb-4 text-gray-600 text-center">
+                Please log in to fill out the form. This is only a preview.
+              </p>
 
-                  {/* Image Carousel */}
-                  <div className="flex justify-center items-center relative">
-                    {/* Left Arrow */}
-                    <button
-                      onClick={() =>
-                        setCurrentImage((prev) =>
-                          prev === 0 ? images[modalType].length - 1 : prev - 1
-                        )
-                      }
-                      className="absolute left-0 p-2 bg-yellow-500 text-black rounded-full hover:bg-yellow-400"
-                    >
-                      ←
-                    </button>
+              {/* Image Carousel */}
+              <div className="flex justify-center items-center relative">
+                <button
+                  onClick={() =>
+                    setCurrentImage((prev) =>
+                      prev === 0 ? images[modalType].length - 1 : prev - 1
+                    )
+                  }
+                  className="absolute left-0 p-2 bg-yellow-500 text-black rounded-full hover:bg-yellow-400"
+                >
+                  ←
+                </button>
 
-                    {/* Display current image */}
-                    <img
-                      src={images[modalType][currentImage]}
-                      alt={`${modalType} Form Preview`}
-                      className="max-w-sm max-h-[500px] object-contain rounded-lg border border-gray-300"
-                    />
+                <img
+                  src={images[modalType][currentImage]}
+                  alt={`${modalType} Form Preview`}
+                  className="max-w-sm max-h-[500px] object-contain rounded-lg border border-gray-300"
+                />
 
-                    {/* Right Arrow */}
-                    <button
-                      onClick={() =>
-                        setCurrentImage((prev) =>
-                          prev === images[modalType].length - 1 ? 0 : prev + 1
-                        )
-                      }
-                      className="absolute right-0 p-2 bg-yellow-500 text-black rounded-full hover:bg-yellow-400"
-                    >
-                      →
-                    </button>
-                  </div>
-
-                  {/* Close Button */}
-                  <div className="mt-6 flex justify-end">
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="bg-yellow-500 text-black font-bold px-4 py-2 rounded hover:bg-yellow-400"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
+                <button
+                  onClick={() =>
+                    setCurrentImage((prev) =>
+                      prev === images[modalType].length - 1 ? 0 : prev + 1
+                    )
+                  }
+                  className="absolute right-0 p-2 bg-yellow-500 text-black rounded-full hover:bg-yellow-400"
+                >
+                  →
+                </button>
               </div>
-            )}
-          </section>
+
+              {/* Close Button */}
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="bg-yellow-500 text-black font-bold px-4 py-2 rounded hover:bg-yellow-400"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
 
       {/* Footer */}
-      <Footer/>
+      <Footer />
     </div>
   );
 }

@@ -53,8 +53,7 @@ export default function DashboardPage() {
 
   const showMessageModal = (message: string) =>
     setModal({ isOpen: true, message, onConfirm: () => setModal({ ...modal, isOpen: false }) });
-
-  // --- Update date_logged_in safely (only for authenticated users) ---
+  
   const updateLoginDate = async (userEmail?: string) => {
     if (!userEmail) return;
     try {
