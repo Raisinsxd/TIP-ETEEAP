@@ -1,12 +1,17 @@
 "use client";
-import React, { useState } from "react";
-import Header from "./components/Header";
-import Footer from "./components/Footer";
-import Assessment from "./components/Assessment";
+import React, { useState, useEffect } from "react";
+import Header from "./components/header";
+import Footer from "./components/footer";
+import Assessment from "./components/assessment";
 import WhoCanEnroll from "./components/whocanenroll";
 import Main from "./components/mainsection";
 import { signIn } from "next-auth/react";
 import { useSession } from "next-auth/react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default function Page() {
   const { data: session } = useSession();
@@ -29,27 +34,67 @@ export default function Page() {
     ],
   };
 
-  // Application Form
-  const handleApplicationClick = () => {
+  // Upsert user info when session changes
+  useEffect(() => {
+  const saveUser = async () => {
+    if (session?.user && session.user.email) {
+      // Optional: add a tiny delay for auth to “settle”
+      await new Promise((r) => setTimeout(r, 200));
+
+      try {
+        const { data, error } = await supabase
+          .from("users")
+          .upsert(
+            [
+              {
+                name: session.user.name || "Unknown",
+                email: session.user.email,
+                date_logged_in: new Date().toISOString(),
+              },
+            ],
+            { onConflict: "email" }
+          )
+          .select();
+
+        if (error) {
+          console.error("Supabase upsert error:", {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+          });
+        } else {
+          console.log("User upsert successful:", data);
+        }
+      } catch (err) {
+        console.error("Error saving user:", err);
+      }
+    }
+  };
+
+  saveUser();
+}, [session]);
+
+
+  function handleApplicationClick() {
     if (session) {
-      window.location.href = "/appform"; 
+      window.location.href = "/appform";
     } else {
       setModalType("application");
       setCurrentImage(0);
       setShowModal(true);
     }
-  };
+  }
 
-  // Portfolio Form
-  const handlePortfolioClick = () => {
+  function handlePortfolioClick() {
     if (session) {
-      window.location.href = "/portform"; 
+      window.location.href = "/portform";
     } else {
       setModalType("portfolio");
       setCurrentImage(0);
       setShowModal(true);
     }
-  };
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-gray-900 to-slate-800 text-white">
@@ -231,4 +276,25 @@ export default function Page() {
       <Footer />
     </div>
   );
+
+  // Handlers outside return statement
+  function handleApplicationClick() {
+    if (session) {
+      window.location.href = "/appform";
+    } else {
+      setModalType("application");
+      setCurrentImage(0);
+      setShowModal(true);
+    }
+  }
+
+  function handlePortfolioClick() {
+    if (session) {
+      window.location.href = "/portform";
+    } else {
+      setModalType("portfolio");
+      setCurrentImage(0);
+      setShowModal(true);
+    }
+  }
 }
