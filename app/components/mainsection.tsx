@@ -11,7 +11,7 @@ export default function MainSection({
   const { data: session } = useSession();
 
   return (
-    <div className="flex flex-col lg:flex-row items-stretch min-h-screen">
+    <div className="flex flex-col lg:flex-row items-stretch min-h-screen mt-12">
       {/* Left Section */}
       <div className="relative flex flex-col justify-center items-center lg:w-1/2 p-8 lg:p-12 bg-gradient-to-br from-gray-800 via-gray-900 to-black">
         {/* Background Pattern */}
