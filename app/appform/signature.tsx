@@ -8,6 +8,7 @@ import PrioritiesGoalsForm from "./c-h";
 import CreativeWorksForm from "./i";
 import LifelongLearningForm from "./j";
 import SelfReportForm from "./selfassessment";
+import SignatureForm from "./signature";
 
 // HELPER to get today's date
 const getTodayDateISO = () => {
@@ -43,21 +44,6 @@ function Pagination({ currentStep, totalSteps, stepTitles }: { currentStep: numb
   );
 }
 
-function FinalReviewStep({ nextStep, prevStep }: { nextStep: () => void, prevStep: () => void }) {
-    return (
-     <form className="bg-white shadow-lg rounded-2xl w-full max-w-3xl flex flex-col">
-        <div className="p-8 text-center">
-            <h3 className="font-semibold text-lg mb-4 text-black">Final Step: Review and Submit</h3>
-            <p className="text-gray-600 mb-6">You have completed all the sections. Please click the button below to submit your application.</p>
-        </div>
-        <div className="flex justify-between p-6 bg-gray-50 rounded-b-2xl">
-            <button type="button" onClick={prevStep} className="bg-gray-300 text-black font-semibold py-2 px-6 rounded-lg hover:bg-gray-400">← Back</button>
-            <button type="button" onClick={nextStep} className="bg-green-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-600">Submit Application</button>
-        </div>
-    </form>
-    )
-}
-
 function SuccessScreen() {
     return (
         <div className="bg-white shadow-lg rounded-2xl w-full max-w-3xl p-12 text-center">
@@ -77,10 +63,11 @@ export default function ApplicationFormPage() {
     goals: { degrees: [""], statement: "" },
     creativeWorks: [{ title: "", institution: "", dates: "" }],
     lifelongLearning: { hobbies: "", skills: "", workActivities: "", volunteer: "", travels: "" },
-    selfAssessment: { jobLearning: "", teamworkLearning: "", selfLearning: "", workBenefits: "", essay: "" }
+    selfAssessment: { jobLearning: "", teamworkLearning: "", selfLearning: "", workBenefits: "", essay: "" },
+    signature: null,
   });
 
-  const stepTitles = ["Initial Info", "Personal", "Goals", "Creative Works", "Learning", "Self Assessment", "Submit"];
+  const stepTitles = ["Initial Info", "Personal", "Goals", "Creative Works", "Learning", "Self Assessment", "Signature"];
   const totalSteps = stepTitles.length;
 
   const nextStep = () => setCurrentStep((prev) => prev + 1);
@@ -100,7 +87,7 @@ export default function ApplicationFormPage() {
       case 4: return <CreativeWorksForm formData={formData} setFormData={setFormData} nextStep={nextStep} prevStep={prevStep} />;
       case 5: return <LifelongLearningForm formData={formData} setFormData={setFormData} nextStep={nextStep} prevStep={prevStep} />;
       case 6: return <SelfReportForm formData={formData} setFormData={setFormData} nextStep={nextStep} prevStep={prevStep} />;
-      case 7: return <FinalReviewStep nextStep={handleSubmit} prevStep={prevStep} />;
+      case 7: return <SignatureForm formData={formData} setFormData={setFormData} handleSubmit={handleSubmit} prevStep={prevStep} />;
       case 8: return <SuccessScreen />;
       default: return <div>Form complete or invalid step.</div>;
     }
