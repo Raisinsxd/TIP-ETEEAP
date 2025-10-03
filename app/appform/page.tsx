@@ -11,7 +11,7 @@ import SelfReportForm from "./selfassessment";
 
 // HELPER to get today's date
 const getTodayDateISO = () => {
-  const today = new Date();
+  const today = new Date(); 
   return today.toISOString().split("T")[0];
 };
 
@@ -46,6 +46,26 @@ function Pagination({ currentStep, totalSteps, stepTitles }: { currentStep: numb
 function FinalReviewStep({ nextStep, prevStep }: { nextStep: () => void, prevStep: () => void }) {
     return (
      <form className="bg-white shadow-lg rounded-2xl w-full max-w-3xl flex flex-col">
+      <div className="space-y-4">
+                <div className="pt-4 border-t border-gray-200">
+                    <h3 className="font-bold text-base mb-2 flex items-center text-gray-800">
+                        <PenTool size={18} className="mr-2"/>
+                        Applicant's Signature
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-3">
+                        By signing below, I declare that all information provided is true and correct.
+                    </p>
+                    <SignaturePad ref={signaturePadRef} />
+                    {signatureError && <p className="mt-2 text-sm text-red-600">{signatureError}</p>}
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-yellow-500 text-gray-900 font-bold py-3 px-4 rounded-lg hover:bg-yellow-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white focus:ring-yellow-500 transition-transform transform hover:scale-105"
+                >
+                  Submit Application →
+                </button>
+            </div>
         <div className="p-8 text-center">
             <h3 className="font-semibold text-lg mb-4 text-black">Final Step: Review and Submit</h3>
             <p className="text-gray-600 mb-6">You have completed all the sections. Please click the button below to submit your application.</p>
