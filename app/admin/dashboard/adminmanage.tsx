@@ -24,8 +24,12 @@ export default function AdminManagement() {
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
+  // ✅ 1. Add state for the email validation error
+  const [emailError, setEmailError] = useState("");
 
   const fetchAdmins = async () => {
     setLoading(true);
@@ -56,23 +60,24 @@ export default function AdminManagement() {
   }, []);
 
   const validatePassword = (password: string) => {
-    if (!password) {
-        return "";
+    if (!password) return "";
+    if (password.length < 8) return "Password must be at least 8 characters long.";
+    if (!/[A-Z]/.test(password)) return "Password must contain an uppercase letter.";
+    if (!/[a-z]/.test(password)) return "Password must contain a lowercase letter.";
+    if (!/\d/.test(password)) return "Password must contain a number.";
+    if (!/[!@#$%^&*]/.test(password)) return "Password must contain a special character (e.g., !@#$%).";
+    return "";
+  };
+
+  // ✅ 2. Create an email validation function
+  const validateEmail = (email: string) => {
+    if (!email) {
+      return "Email cannot be empty.";
     }
-    if (password.length < 8) {
-      return "Password must be at least 8 characters long.";
-    }
-    if (!/[A-Z]/.test(password)) {
-      return "Password must contain an uppercase letter.";
-    }
-    if (!/[a-z]/.test(password)) {
-      return "Password must contain a lowercase letter.";
-    }
-    if (!/\d/.test(password)) {
-      return "Password must contain a number.";
-    }
-    if (!/[!@#$%^&*]/.test(password)) {
-      return "Password must contain a special character (e.g., !@#$%).";
+    // A simple regex for email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return "Please enter a valid email address.";
     }
     return "";
   };
@@ -82,6 +87,13 @@ export default function AdminManagement() {
     setNewPassword(password);
     setPasswordError(validatePassword(password));
   };
+  
+  // ✅ 3. Create a handler for email input changes
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setNewEmail(email);
+    setEmailError(validateEmail(email));
+  };
 
   const selectAdmin = (admin: AdminProfile) => {
     setSelectedAdmin(admin);
@@ -89,12 +101,29 @@ export default function AdminManagement() {
     setNewName(admin.name ?? "");
     setNewEmail(admin.email ?? "");
     setNewPassword("");
+    setConfirmPassword("");
     setPasswordError("");
+    setEmailError(""); // Reset on new selection
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const saveAdminInfo = async () => {
     if (!selectedAdmin) return;
     
+    // ✅ 4. Check for email and password errors before saving
+    const currentEmailError = validateEmail(newEmail);
+    if (currentEmailError) {
+        setEmailError(currentEmailError);
+        alert("Please fix the errors before saving.");
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+      alert("Passwords do not match.");
+      return;
+    }
+
     if (newPassword.trim() && passwordError) {
       alert("Please fix the password errors before saving.");
       return;
@@ -107,9 +136,7 @@ export default function AdminManagement() {
         .update({ name: newName, email: newEmail })
         .eq("id", selectedAdmin.id);
 
-      if (profileError) {
-        throw new Error("Failed to update profile: " + profileError.message);
-      }
+      if (profileError) throw new Error("Failed to update profile: " + profileError.message);
       
       if (newPassword.trim()) {
         const response = await fetch('/api/update-admin-password', {
@@ -121,14 +148,13 @@ export default function AdminManagement() {
           }),
         });
         const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.error || 'Failed to update password.');
-        }
+        if (!response.ok) throw new Error(result.error || 'Failed to update password.');
       }
 
       alert("Admin updated successfully.");
       setEditing(false);
       setNewPassword("");
+      setConfirmPassword("");
       fetchAdmins();
 
     } catch (err) {
@@ -167,14 +193,13 @@ export default function AdminManagement() {
     <div>
       <h2 className="text-2xl font-semibold text-black mb-4">Admin Management</h2>
       <div className="flex gap-4">
+        {/* Admin List */}
         <div className="w-1/3 overflow-auto max-h-[400px] border border-gray-300 rounded p-2 bg-gray-50">
           <h3 className="font-semibold mb-2 text-black">All Admins</h3>
           {admins.map((admin) => (
             <div
               key={admin.id}
-              className={`cursor-pointer p-2 rounded text-black ${
-                selectedAdmin?.id === admin.id ? "bg-yellow-200 font-semibold" : ""
-              }`}
+              className={`cursor-pointer p-2 rounded text-black ${selectedAdmin?.id === admin.id ? "bg-yellow-200 font-semibold" : ""}`}
               onClick={() => selectAdmin(admin)}
             >
               {admin.name ?? "-"} ({admin.email ?? "-"})
@@ -182,6 +207,7 @@ export default function AdminManagement() {
           ))}
         </div>
 
+        {/* Admin Details Form */}
         <div className="flex-1 bg-gray-50 p-6 rounded-xl border border-yellow-400 shadow-md text-black">
           {selectedAdmin ? (
             <>
@@ -189,8 +215,7 @@ export default function AdminManagement() {
                 <strong>Name:</strong>{" "}
                 {!editing ? (
                   <>
-                    {newName ?? "-"}{" "}
-                    <button onClick={() => setEditing(true)} className="ml-2 text-yellow-500 hover:text-yellow-700" title="Edit">✏️</button>
+                    {newName ?? "-"} <button onClick={() => setEditing(true)} className="ml-2 text-yellow-500 hover:text-yellow-700" title="Edit">✏️</button>
                   </>
                 ) : (
                   <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="border border-gray-400 rounded px-2 py-1 text-black" />
@@ -201,37 +226,64 @@ export default function AdminManagement() {
                 {!editing ? (
                   newEmail ?? "-"
                 ) : (
-                  <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} className="border border-gray-400 rounded px-2 py-1 text-black" />
+                    <>
+                      <input
+                        type="email"
+                        value={newEmail}
+                        // ✅ 5. Use the new handler for real-time validation
+                        onChange={handleEmailChange}
+                        className="border border-gray-400 rounded px-2 py-1 text-black"
+                      />
+                      {/* ✅ 6. Display the email error message */}
+                      {emailError && (
+                          <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                      )}
+                    </>
                 )}
               </div>
-
-              <div>
-                <strong>Password:</strong>{" "}
-                {!editing ? (
-                  "************"
-                ) : (
-                  <div className="relative inline-block">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={newPassword}
-                      onChange={handlePasswordChange}
-                      placeholder="Enter new password to change"
-                      className="border border-gray-400 rounded px-2 py-1 pr-10 text-black"
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-gray-900">
-                      {showPassword ? <FaEyeSlash /> : <FaEye />}
-                    </button>
+              
+              {!editing ? (
+                <div><strong>Password:</strong> ************</div>
+              ) : (
+                <div className="space-y-2 mt-2">
+                  <div>
+                    <strong>New Password:</strong>
+                    <div className="relative inline-block">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={handlePasswordChange}
+                        placeholder="Enter new password"
+                        className="border border-gray-400 rounded px-2 py-1 pr-10 text-black"
+                      />
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-gray-900">
+                        {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                    </div>
+                    {passwordError && (<p className="text-red-500 text-sm mt-1">{passwordError}</p>)}
                   </div>
-                )}
-                {passwordError && editing && (
-                  <p className="text-red-500 text-sm mt-1">{passwordError}</p>
-                )}
-              </div>
-
+                  <div>
+                    <strong>Confirm Password:</strong>
+                    <div className="relative inline-block">
+                       <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="border border-gray-400 rounded px-2 py-1 pr-10 text-black"
+                      />
+                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-gray-900">
+                        {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               {editing && (
                 <div className="mt-4 space-x-2">
                   <button onClick={saveAdminInfo} className="px-4 py-2 bg-yellow-400 text-black rounded hover:bg-yellow-500" disabled={loading}>Save</button>
-                  <button onClick={() => { setEditing(false); if (selectedAdmin) { setNewName(selectedAdmin.name ?? ""); setNewEmail(selectedAdmin.email ?? ""); setNewPassword(""); setPasswordError(""); } }} className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400" disabled={loading}>Cancel</button>
+                  <button onClick={() => { setEditing(false); if (selectedAdmin) { setNewName(selectedAdmin.name ?? ""); setNewEmail(selectedAdmin.email ?? ""); setNewPassword(""); setConfirmPassword(""); setPasswordError(""); setEmailError(""); setShowPassword(false); setShowConfirmPassword(false); } }} className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400" disabled={loading}>Cancel</button>
                   <button onClick={() => setShowDeleteModal(true)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700" disabled={loading}>Delete</button>
                 </div>
               )}
@@ -241,7 +293,8 @@ export default function AdminManagement() {
           )}
         </div>
       </div>
-
+      
+      {/* Delete Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
           <div className="bg-white p-6 rounded-xl w-full max-w-md relative text-black">

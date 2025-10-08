@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ComponentType } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import AdminManagement from "./adminmanage";
@@ -15,13 +15,22 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+type TabName = "Home" | "AdminLogins" | "Applicants" | "UserLogins" | "AdminManagement";
+
+const tabs: { [key in TabName]: { title: string; component: ComponentType<any> | null } } = {
+  Home: { title: "Home", component: null },
+  AdminLogins: { title: "Admin Login History", component: UserManage },
+  Applicants: { title: "Applicant Submissions", component: ApplicantsManage },
+  UserLogins: { title: "User Login History", component: UserLoginsManage },
+  AdminManagement: { title: "Admin Management", component: AdminManagement },
+};
+
+
 export default function DashboardPage({ initialGoogleUsers }: { initialGoogleUsers: GoogleUser[] }) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
-  // ✅ FIX: Corrected the activeTab state to have unique names for each tab.
-  const [activeTab, setActiveTab] = useState<"Home" | "AdminLogins" | "Applicants" | "UserLogins" | "AdminManagement">("Home");
+  const [activeTab, setActiveTab] = useState<TabName>("Home");
 
   useEffect(() => {
     const checkSession = async () => {
@@ -53,82 +62,76 @@ export default function DashboardPage({ initialGoogleUsers }: { initialGoogleUse
     router.replace("/admin");
   }
 
+  const ActiveComponent = tabs[activeTab].component;
+  const pageTitle = tabs[activeTab].title;
+  
+  const componentProps: { [key: string]: any } = {
+    UserLogins: { users: initialGoogleUsers },
+    AdminManagement: { currentUserEmail: currentUser?.email ?? null },
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-white text-yellow-400">
-        Loading...
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 text-yellow-500">
+        <p className="text-lg font-semibold">Loading Dashboard...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-white text-yellow-400 font-sans">
-      <aside className="w-64 bg-gray-100 border-r border-yellow-400 p-6 flex flex-col">
-        <h2 className="text-2xl font-bold mb-6 text-black">Admin Panel</h2>
-        <nav className="flex flex-col gap-3 text-black">
-          <button
-            onClick={() => setActiveTab("Home")}
-            className={`text-left px-3 py-2 rounded hover:bg-yellow-200 ${
-              activeTab === "Home" ? "bg-yellow-200 font-semibold" : ""
-            }`}
-          >
-            Home
-          </button>
-          <button
-            onClick={() => setActiveTab("AdminLogins")} // ✅ FIX: Sets "AdminLogins" state
-            className={`text-left px-3 py-2 rounded hover:bg-yellow-200 ${
-              activeTab === "AdminLogins" ? "bg-yellow-200 font-semibold" : ""
-            }`}
-          >
-            Admin Logins
-          </button>
-          <button
-            onClick={() => setActiveTab("Applicants")}
-            className={`text-left px-3 py-2 rounded hover:bg-yellow-200 ${
-              activeTab === "Applicants" ? "bg-yellow-200 font-semibold" : ""
-            }`}
-          >
-            Applicants
-          </button>
-          <button
-            onClick={() => setActiveTab("UserLogins")} // ✅ FIX: Sets "UserLogins" state
-            className={`text-left px-3 py-2 rounded hover:bg-yellow-200 ${
-              activeTab === "UserLogins" ? "bg-yellow-200 font-semibold" : ""
-            }`}
-          >
-            User Logins
-          </button>
-          <button
-            onClick={() => setActiveTab("AdminManagement")}
-            className={`text-left px-3 py-2 rounded hover:bg-yellow-200 ${
-              activeTab === "AdminManagement" ? "bg-yellow-200 font-semibold" : ""
-            }`}
-          >
-            Admin Management
-          </button>
-          <button
-            onClick={handleLogout}
-            className="text-left px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600 mt-6"
-          >
-            Logout
-          </button>
-        </nav>
+    <div className="flex min-h-screen font-sans">
+      {/* ===== Sidebar ===== */}
+      <aside className="w-64 bg-white border-r border-gray-200 p-5 flex flex-col shrink-0">
+        <div className="flex items-center gap-3 mb-8">
+            <img src="/assets/TIPLogo.png" alt="TIP Logo" className="w-9 h-9" />
+            <h1 className="text-xl font-bold text-gray-800">Admin Panel</h1>
+        </div>
+
+        {/* ✅ Main navigation wrapper */}
+        <div className="flex flex-col flex-grow">
+            <nav className="flex flex-col gap-2">
+                {Object.keys(tabs).map((tabKey) => {
+                    const tab = tabs[tabKey as TabName];
+                    return (
+                    <button
+                        key={tabKey}
+                        onClick={() => setActiveTab(tabKey as TabName)}
+                        className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 ${
+                        activeTab === tabKey
+                            ? "bg-yellow-400 text-white shadow-sm"
+                            : "text-gray-600 hover:bg-gray-100"
+                        }`}
+                    >
+                        {tab.title === "Admin Login History" ? "Admin Logins" : tab.title === "User Login History" ? "User Logins" : tab.title}
+                    </button>
+                    );
+                })}
+            </nav>
+
+            {/* ✅ Logout button moved here */}
+            <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2.5 rounded-lg text-sm font-medium transition-colors duration-200 bg-red-500 text-white hover:bg-red-600 mt-6"
+            >
+                Logout
+            </button>
+        </div>
       </aside>
 
-      <main className="flex-1 p-8 overflow-y-auto space-y-8">
-        {activeTab === "Home" && (
+      {/* ===== Main Content ===== */}
+      <main className="flex-1 p-8 bg-gray-50 overflow-y-auto">
+        {activeTab === "Home" ? (
           <div>
-            <h2 className="text-2xl font-bold text-black">Welcome to the Admin Panel</h2>
-            <p className="text-black mt-4">Select a tab to manage Users or Admin settings.</p>
+            <h2 className="text-3xl font-bold text-gray-800">Welcome to the Admin Panel</h2>
+            <p className="text-gray-600 mt-2">Select a tab from the sidebar to manage your application.</p>
           </div>
-        )}
-        {activeTab === "AdminLogins" && <UserManage />} 
-        {activeTab === "Applicants" && <ApplicantsManage />}
-        
-        {activeTab === "UserLogins" && <UserLoginsManage users={initialGoogleUsers} />}
-        
-        {activeTab === "AdminManagement" && (
-          <AdminManagement currentUserEmail={currentUser?.email ?? null} />
+        ) : (
+          <div className="space-y-6">
+            <h2 className="text-3xl font-bold text-gray-800">{pageTitle}</h2>
+            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+              {ActiveComponent && <ActiveComponent {...componentProps[activeTab]} />}
+            </div>
+          </div>
         )}
       </main>
     </div>
