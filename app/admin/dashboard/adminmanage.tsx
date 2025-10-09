@@ -12,15 +12,23 @@ interface AdminProfile {
   id: string;
   name: string | null;
   email: string | null;
+  role?: string;
 }
 
 export default function AdminManagement() {
   const [admins, setAdmins] = useState<AdminProfile[]>([]);
+  const [currentUser, setCurrentUser] = useState<AdminProfile | null>(null);
   const [selectedAdmin, setSelectedAdmin] = useState<AdminProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newAdminName, setNewAdminName] = useState("");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [createdAdminInfo, setCreatedAdminInfo] = useState<{ email: string; temporaryPassword: string; } | null>(null);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -28,36 +36,66 @@ export default function AdminManagement() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
-  // ✅ 1. Add state for the email validation error
   const [emailError, setEmailError] = useState("");
 
-  const fetchAdmins = async () => {
+  const fetchAdminsAndCurrentUser = async () => {
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user logged in");
+
       const { data, error } = await supabase.from("admin").select("*");
-      if (error) {
-        console.error("Error fetching admins:", error.message);
-        setAdmins([]);
-      } else {
-        const adminData = data as AdminProfile[];
-        setAdmins(adminData);
-        if (adminData && adminData.length > 0 && !selectedAdmin) {
-          setSelectedAdmin(adminData[0]);
-          setNewName(adminData[0].name ?? "");
-          setNewEmail(adminData[0].email ?? "");
-        }
+      if (error) throw error;
+
+      const adminData = data as AdminProfile[];
+      setAdmins(adminData);
+
+      const currentUserProfile = adminData.find(admin => admin.id === user.id);
+      setCurrentUser(currentUserProfile || null);
+
+      if (adminData.length > 0 && !selectedAdmin) {
+        const initialAdmin = adminData[0];
+        setSelectedAdmin(initialAdmin);
+        setNewName(initialAdmin.name ?? "");
+        setNewEmail(initialAdmin.email ?? "");
       }
     } catch (err) {
-      console.error("Unexpected error fetching admins:", err);
-      setAdmins([]);
+      console.error("Error fetching data:", (err as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAdmins();
+    fetchAdminsAndCurrentUser();
   }, []);
+
+  const handleAddAdmin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setCreatedAdminInfo(null);
+    try {
+      const response = await fetch('/api/create-admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newAdminName, email: newAdminEmail }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to create admin.');
+      
+      setCreatedAdminInfo({
+        email: newAdminEmail,
+        temporaryPassword: result.temporaryPassword,
+      });
+      setNewAdminName("");
+      setNewAdminEmail("");
+      fetchAdminsAndCurrentUser();
+    } catch (err) {
+      alert((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const validatePassword = (password: string) => {
     if (!password) return "";
@@ -69,32 +107,25 @@ export default function AdminManagement() {
     return "";
   };
 
-  // ✅ 2. Create an email validation function
   const validateEmail = (email: string) => {
-    if (!email) {
-      return "Email cannot be empty.";
-    }
-    // A simple regex for email format validation
+    if (!email) return "Email cannot be empty.";
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return "Please enter a valid email address.";
-    }
+    if (!emailRegex.test(email)) return "Please enter a valid email address.";
     return "";
   };
-
+  
   const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const password = e.target.value;
     setNewPassword(password);
     setPasswordError(validatePassword(password));
   };
-  
-  // ✅ 3. Create a handler for email input changes
+
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const email = e.target.value;
     setNewEmail(email);
     setEmailError(validateEmail(email));
   };
-
+  
   const selectAdmin = (admin: AdminProfile) => {
     setSelectedAdmin(admin);
     setEditing(false);
@@ -103,60 +134,48 @@ export default function AdminManagement() {
     setNewPassword("");
     setConfirmPassword("");
     setPasswordError("");
-    setEmailError(""); // Reset on new selection
+    setEmailError("");
     setShowPassword(false);
     setShowConfirmPassword(false);
   };
-
+  
   const saveAdminInfo = async () => {
     if (!selectedAdmin) return;
-    
-    // ✅ 4. Check for email and password errors before saving
     const currentEmailError = validateEmail(newEmail);
     if (currentEmailError) {
         setEmailError(currentEmailError);
         alert("Please fix the errors before saving.");
         return;
     }
-    
     if (newPassword !== confirmPassword) {
       alert("Passwords do not match.");
       return;
     }
-
     if (newPassword.trim() && passwordError) {
       alert("Please fix the password errors before saving.");
       return;
     }
-
     setLoading(true);
     try {
       const { error: profileError } = await supabase
         .from("admin")
         .update({ name: newName, email: newEmail })
         .eq("id", selectedAdmin.id);
-
       if (profileError) throw new Error("Failed to update profile: " + profileError.message);
-      
       if (newPassword.trim()) {
         const response = await fetch('/api/update-admin-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId: selectedAdmin.id,
-            newPassword: newPassword,
-          }),
+          body: JSON.stringify({ userId: selectedAdmin.id, newPassword: newPassword }),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.error || 'Failed to update password.');
       }
-
       alert("Admin updated successfully.");
       setEditing(false);
       setNewPassword("");
       setConfirmPassword("");
-      fetchAdmins();
-
+      fetchAdminsAndCurrentUser();
     } catch (err) {
       console.error("Error updating admin:", err);
       alert((err as Error).message);
@@ -164,7 +183,7 @@ export default function AdminManagement() {
       setLoading(false);
     }
   };
-
+  
   const deleteAdmin = async () => {
     if (!selectedAdmin) return;
     setLoading(true);
@@ -176,7 +195,7 @@ export default function AdminManagement() {
         alert("Admin deleted successfully.");
         setShowDeleteModal(false);
         setSelectedAdmin(null);
-        fetchAdmins();
+        fetchAdminsAndCurrentUser();
       }
     } catch (err) {
       alert("Unexpected error deleting admin.");
@@ -185,124 +204,153 @@ export default function AdminManagement() {
     }
   };
 
-  if (loading) {
-    return <p className="text-yellow-600">Loading admins...</p>;
+  if (loading && !admins.length) {
+    return <p className="text-gray-500">Loading admin data...</p>;
   }
 
   return (
-    <div>
-      <h2 className="text-2xl font-semibold text-black mb-4">Admin Management</h2>
-      <div className="flex gap-4">
-        {/* Admin List */}
-        <div className="w-1/3 overflow-auto max-h-[400px] border border-gray-300 rounded p-2 bg-gray-50">
-          <h3 className="font-semibold mb-2 text-black">All Admins</h3>
-          {admins.map((admin) => (
-            <div
-              key={admin.id}
-              className={`cursor-pointer p-2 rounded text-black ${selectedAdmin?.id === admin.id ? "bg-yellow-200 font-semibold" : ""}`}
-              onClick={() => selectAdmin(admin)}
-            >
-              {admin.name ?? "-"} ({admin.email ?? "-"})
-            </div>
-          ))}
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div></div> 
+        {currentUser?.role === 'super_admin' && (
+          <button 
+            onClick={() => {
+              setShowAddModal(true);
+              setCreatedAdminInfo(null);
+            }}
+            className="px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg shadow-md hover:bg-yellow-600 transition-colors"
+          >
+            + Add New Admin
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-6">
+        <div className="w-1/3 bg-white p-4 rounded-lg border border-gray-200">
+          <h3 className="font-semibold mb-3 text-gray-700 text-lg">All Admins</h3>
+          <div className="flex flex-col gap-1 max-h-[50vh] overflow-y-auto">
+            {admins.map((admin) => (
+              <div
+                key={admin.id}
+                className={`cursor-pointer p-3 rounded-md ${selectedAdmin?.id === admin.id ? "bg-yellow-400 text-gray-800 font-semibold" : "text-gray-700 hover:bg-gray-100"}`}
+                onClick={() => selectAdmin(admin)}
+              >
+                <p className="font-medium">{admin.name ?? "No Name"}</p>
+                <p className="text-xs">{admin.email ?? "No Email"}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Admin Details Form */}
-        <div className="flex-1 bg-gray-50 p-6 rounded-xl border border-yellow-400 shadow-md text-black">
+        <div className="flex-1 bg-white p-6 rounded-lg border border-gray-200">
           {selectedAdmin ? (
-            <>
-              <div className="mb-2">
-                <strong>Name:</strong>{" "}
-                {!editing ? (
-                  <>
-                    {newName ?? "-"} <button onClick={() => setEditing(true)} className="ml-2 text-yellow-500 hover:text-yellow-700" title="Edit">✏️</button>
-                  </>
-                ) : (
-                  <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="border border-gray-400 rounded px-2 py-1 text-black" />
-                )}
-              </div>
-              <div className="mb-2">
-                <strong>Email:</strong>{" "}
-                {!editing ? (
-                  newEmail ?? "-"
-                ) : (
-                    <>
-                      <input
-                        type="email"
-                        value={newEmail}
-                        // ✅ 5. Use the new handler for real-time validation
-                        onChange={handleEmailChange}
-                        className="border border-gray-400 rounded px-2 py-1 text-black"
-                      />
-                      {/* ✅ 6. Display the email error message */}
-                      {emailError && (
-                          <p className="text-red-500 text-sm mt-1">{emailError}</p>
-                      )}
-                    </>
-                )}
-              </div>
-              
-              {!editing ? (
-                <div><strong>Password:</strong> ************</div>
-              ) : (
-                <div className="space-y-2 mt-2">
+            <div className="space-y-4">
+              <div className="flex justify-between items-start">
                   <div>
-                    <strong>New Password:</strong>
-                    <div className="relative inline-block">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={handlePasswordChange}
-                        placeholder="Enter new password"
-                        className="border border-gray-400 rounded px-2 py-1 pr-10 text-black"
-                      />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-gray-900">
-                        {showPassword ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                    {passwordError && (<p className="text-red-500 text-sm mt-1">{passwordError}</p>)}
+                      <h3 className="text-lg font-bold text-gray-800">{newName}</h3>
+                      <p className="text-sm text-gray-500">{newEmail}</p>
                   </div>
-                  <div>
-                    <strong>Confirm Password:</strong>
-                    <div className="relative inline-block">
-                       <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm new password"
-                        className="border border-gray-400 rounded px-2 py-1 pr-10 text-black"
-                      />
-                      <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-700 hover:text-gray-900">
-                        {showConfirmPassword ? <FaEyeSlash /> : <FaEye />}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
+                  {!editing && (
+                      <button onClick={() => setEditing(true)} className="px-4 py-2 text-sm bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300">Edit</button>
+                  )}
+              </div>
               
               {editing && (
-                <div className="mt-4 space-x-2">
-                  <button onClick={saveAdminInfo} className="px-4 py-2 bg-yellow-400 text-black rounded hover:bg-yellow-500" disabled={loading}>Save</button>
-                  <button onClick={() => { setEditing(false); if (selectedAdmin) { setNewName(selectedAdmin.name ?? ""); setNewEmail(selectedAdmin.email ?? ""); setNewPassword(""); setConfirmPassword(""); setPasswordError(""); setEmailError(""); setShowPassword(false); setShowConfirmPassword(false); } }} className="px-4 py-2 bg-gray-300 text-black rounded hover:bg-gray-400" disabled={loading}>Cancel</button>
-                  <button onClick={() => setShowDeleteModal(true)} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700" disabled={loading}>Delete</button>
+                <div className="pt-4 border-t border-gray-200 space-y-4">
+                  <div>
+                    <label className="font-medium text-gray-700">Name</label>
+                    {/* ✅ FIX: Added text-gray-800 to make input text visible */}
+                    <input type="text" value={newName} onChange={(e) => setNewName(e.target.value)} className="w-full mt-1 p-2 border rounded-lg text-gray-800" />
+                  </div>
+                  <div>
+                    <label className="font-medium text-gray-700">Email</label>
+                    {/* ✅ FIX: Added text-gray-800 to make input text visible */}
+                    <input type="email" value={newEmail} onChange={handleEmailChange} className="w-full mt-1 p-2 border rounded-lg text-gray-800" />
+                    {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
+                  </div>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="font-medium text-gray-700">New Password</label>
+                      <div className="relative">
+                        {/* ✅ FIX: Added text-gray-800 to make input text visible */}
+                        <input type={showPassword ? "text" : "password"} value={newPassword} onChange={handlePasswordChange} placeholder="Enter to change password" className="w-full mt-1 p-2 border rounded-lg pr-10 text-gray-800" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">{showPassword ? <FaEyeSlash /> : <FaEye />}</button>
+                      </div>
+                      {passwordError && <p className="text-red-500 text-sm mt-1">{passwordError}</p>}
+                    </div>
+                    <div>
+                      <label className="font-medium text-gray-700">Confirm Password</label>
+                      <div className="relative">
+                        {/* ✅ FIX: Added text-gray-800 to make input text visible */}
+                        <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className="w-full mt-1 p-2 border rounded-lg pr-10 text-gray-800" />
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">{showConfirmPassword ? <FaEyeSlash /> : <FaEye />}</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+                    <button onClick={() => setShowDeleteModal(true)} className="px-4 py-2 text-sm bg-red-500 text-white font-semibold rounded-lg hover:bg-red-600">Delete Admin</button>
+                    <div className="space-x-2">
+                      <button onClick={() => { setEditing(false); selectAdmin(selectedAdmin); }} className="px-4 py-2 text-sm bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300">Cancel</button>
+                      <button onClick={saveAdminInfo} className="px-4 py-2 text-sm bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600">Save Changes</button>
+                    </div>
+                  </div>
                 </div>
               )}
-            </>
+            </div>
           ) : (
-            <p>Please select an admin to see details.</p>
+            <p className="text-gray-500">Please select an admin from the list to see details.</p>
           )}
         </div>
       </div>
       
-      {/* Delete Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-8 rounded-xl w-full max-w-md relative text-black shadow-lg">
+            <h3 className="text-xl font-semibold mb-6">Create New Admin Account</h3>
+            {createdAdminInfo ? (
+              <div className="text-center">
+                <p className="text-lg font-medium text-green-600 mb-4">Admin Created Successfully!</p>
+                <p className="text-sm text-gray-600">Please provide these credentials to the new admin. They must change the password on first login.</p>
+                <div className="bg-gray-100 p-4 rounded-lg mt-4 text-left">
+                  <p><strong>Email:</strong> {createdAdminInfo.email}</p>
+                  <p><strong>Temporary Password:</strong> <span className="font-mono bg-gray-200 p-1 rounded">{createdAdminInfo.temporaryPassword}</span></p>
+                </div>
+                <button onClick={() => setShowAddModal(false)} className="mt-6 w-full px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400">Close</button>
+              </div>
+            ) : (
+              <form onSubmit={handleAddAdmin}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="font-medium text-gray-700">Full Name</label>
+                    <input type="text" placeholder="Juan dela Cruz" value={newAdminName} onChange={(e) => setNewAdminName(e.target.value)} required className="w-full mt-1 p-3 border rounded-lg focus:ring focus:ring-yellow-300" />
+                  </div>
+                  <div>
+                    <label className="font-medium text-gray-700">Email Address</label>
+                    <input type="email" placeholder="juan@example.com" value={newAdminEmail} onChange={(e) => setNewAdminEmail(e.target.value)} required className="w-full mt-1 p-3 border rounded-lg focus:ring focus:ring-yellow-300" />
+                  </div>
+                </div>
+                <div className="flex justify-end space-x-3 mt-8">
+                  <button type="button" onClick={() => setShowAddModal(false)} className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300" disabled={loading}>Cancel</button>
+                  <button type="submit" className="px-4 py-2 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600" disabled={loading}>
+                    {loading ? 'Creating...' : 'Create Admin'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+
       {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-md relative text-black">
-            <h3 className="text-xl font-semibold mb-4">Confirm Delete</h3>
-            <p>Are you sure you want to delete Admin {selectedAdmin?.name}?</p>
-            <div className="flex justify-end space-x-3 mt-6">
-              <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400" disabled={loading}>Cancel</button>
-              <button onClick={deleteAdmin} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700" disabled={loading}>Delete</button>
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-8 rounded-xl w-full max-w-md relative text-black shadow-lg">
+            <h3 className="text-xl font-semibold mb-4">Confirm Deletion</h3>
+            <p className="text-gray-600">Are you sure you want to delete the admin account for <span className="font-bold">{selectedAdmin?.name}</span>? This action cannot be undone.</p>
+            <div className="flex justify-end space-x-3 mt-8">
+              <button onClick={() => setShowDeleteModal(false)} className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300" disabled={loading}>Cancel</button>
+              <button onClick={deleteAdmin} className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700" disabled={loading}>
+                {loading ? 'Deleting...' : 'Delete Admin'}
+              </button>
             </div>
           </div>
         </div>
