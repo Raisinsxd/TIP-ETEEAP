@@ -23,8 +23,9 @@ const getTodayDateISO = () => {
     return today.toISOString().split("T")[0];
 };
 
-// --- (Pagination and SuccessScreen components remain the same) ---
+// --- Pagination Component ---
 function Pagination({ currentStep, totalSteps, stepTitles }: { currentStep: number; totalSteps: number; stepTitles: string[] }) {
+  // ... (Your existing Pagination code)
   if (currentStep > totalSteps + 1) return null;
   const steps = stepTitles.map((title, index) => ({ number: index + 1, title }));
   return (
@@ -50,6 +51,7 @@ function Pagination({ currentStep, totalSteps, stepTitles }: { currentStep: numb
   );
 }
 
+// --- Success Screen Component ---
 function SuccessScreen() {
     return (
         <div className="bg-white shadow-lg rounded-2xl w-full max-w-3xl p-12 text-center">
@@ -60,12 +62,12 @@ function SuccessScreen() {
     );
 }
 
-// ✅ 3. Update FinalReviewStep to accept the signature ref from the parent
-function FinalReviewStep({ nextStep, prevStep, signaturePadRef, isSubmitting }: { 
-    nextStep: () => void, 
-    prevStep: () => void, 
+// --- Final Review Step Component ---
+function FinalReviewStep({ nextStep, prevStep, signaturePadRef, isSubmitting }: {
+    nextStep: () => void,
+    prevStep: () => void,
     signaturePadRef: React.RefObject<SignatureCanvas>,
-    isSubmitting: boolean 
+    isSubmitting: boolean
 }) {
     const [signatureError, setSignatureError] = useState<string | null>(null);
 
@@ -86,7 +88,7 @@ function FinalReviewStep({ nextStep, prevStep, signaturePadRef, isSubmitting }: 
                     By signing below, I declare that all information provided is true and correct.
                 </p>
             </div>
-            
+
             <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-bold text-lg mb-2 flex items-center text-gray-800">
                     <PenTool size={20} className="mr-2 text-yellow-600"/>
@@ -113,9 +115,9 @@ function FinalReviewStep({ nextStep, prevStep, signaturePadRef, isSubmitting }: 
                 <button type="button" onClick={prevStep} disabled={isSubmitting} className="bg-gray-300 text-black font-semibold py-2 px-6 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50">
                     ← Back
                 </button>
-                <button 
-                    type="button" 
-                    onClick={handleFinalSubmit} 
+                <button
+                    type="button"
+                    onClick={handleFinalSubmit}
                     disabled={isSubmitting}
                     className="bg-green-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors flex items-center gap-2 disabled:bg-gray-400"
                 >
@@ -132,11 +134,8 @@ export default function ApplicationFormPage() {
     const { data: session } = useSession(); // Get the user's session
     const [currentStep, setCurrentStep] = useState(1);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
-    // ✅ Create the signature ref here in the parent component
     const signaturePadRef = useRef<SignatureCanvas>(null);
 
-    // ✅ This state now includes the 'photo' property in the 'initial' step
     const [formData, setFormData] = useState({
         initial: { name: "", degree: "", campus: "", date: getTodayDateISO(), folderLink: "", photo: null as File | null },
         personalInfo: { fullAddress: "", mobile: "", email: "" },
@@ -149,30 +148,61 @@ export default function ApplicationFormPage() {
     const stepTitles = ["Initial Info", "Personal", "Goals", "Creative Works", "Learning", "Self Assessment", "Submit"];
     const totalSteps = stepTitles.length;
 
-    // ... (Your useEffect hooks for localStorage remain the same)
+    // Load data from localStorage on mount
     useEffect(() => {
-        // ... (load from local storage) ...
-    }, []);
+        try {
+            const savedData = localStorage.getItem('applicationFormData');
+            const savedStep = localStorage.getItem('applicationFormStep');
 
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                parsedData.initial.photo = formData.initial.photo;
+                setFormData(parsedData);
+            }
+            if (savedStep) {
+                const step = parseInt(savedStep, 10);
+                if (step < totalSteps + 2) {
+                    setCurrentStep(step);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load form data from local storage", error);
+            localStorage.removeItem('applicationFormData');
+            localStorage.removeItem('applicationFormStep');
+        }
+    }, []); // Run only once on mount
+
+    // Save data to localStorage when it changes
     useEffect(() => {
-        // ... (save to local storage) ...
+        if (currentStep < totalSteps + 2) {
+            const dataToSave = JSON.parse(JSON.stringify(formData));
+            if (dataToSave.initial.photo) {
+                delete dataToSave.initial.photo;
+            }
+            localStorage.setItem('applicationFormData', JSON.stringify(dataToSave));
+            localStorage.setItem('applicationFormStep', currentStep.toString());
+        }
     }, [formData, currentStep]);
 
     const nextStep = () => setCurrentStep((prev) => prev + 1);
     const prevStep = () => setCurrentStep((prev) => prev - 1);
 
-    // ✅ 4. The new, complete handleSubmit function with Supabase logic
+    // ✅ The handleSubmit function WITH the UUID lookup and console.log
     const handleSubmit = async () => {
         setIsSubmitting(true);
-        
+
         // --- 1. Validation ---
-        if (!session?.user?.id) {
+        if (!session?.user?.email || !session?.user?.id) { // Also check for id
             alert("You must be logged in to submit.");
             setIsSubmitting(false);
             return;
         }
+
+        // ✅ Add console.log here as requested
+        console.log("Current session user ID (from NextAuth):", session.user.id);
+
         const signatureDataUrl = signaturePadRef.current?.toDataURL('image/png');
-        if (!signatureDataUrl) {
+        if (signaturePadRef.current?.isEmpty() || !signatureDataUrl) {
             alert("Signature is empty.");
             setIsSubmitting(false);
             return;
@@ -185,65 +215,101 @@ export default function ApplicationFormPage() {
         }
 
         try {
-            // --- 2. Upload Photo ---
-            const photoFilePath = `${session.user.id}/photo_${photoFile.name}`;
+            // --- 2. Look up the Supabase UUID using the email ---
+            // ⚠️ Make sure 'users' is the correct table name and 'id' is the column with the Supabase UUID
+            console.log(`Looking up user with email: ${session.user.email}`); // Debug log for lookup
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('id')   // Select the Supabase UUID ('id' column)
+                .eq('email', session.user.email) // Match based on email
+                .single(); // Expect only one matching user
+
+            if (userError || !userData?.id) {
+                console.error("User lookup error details:", userError); // Log the specific error
+                throw new Error(`Could not find a matching user in the database for email ${session.user.email}. RLS Policy on 'users' table might be blocking read access. Error: ${userError?.message || 'No user found'}`);
+            }
+            const supabaseUserId = userData.id; // This is the correct UUID
+            console.log("Found Supabase User UUID:", supabaseUserId); // Debug log for found UUID
+
+            // --- 3. Upload Photo using the correct UUID ---
+            const photoFilePath = `${supabaseUserId}/photo_${Date.now()}_${photoFile.name}`;
+            console.log("Uploading photo to:", photoFilePath); // Debug log for upload path
             const { data: photoUploadData, error: photoUploadError } = await supabase.storage
                 .from('application_files')
-                .upload(photoFilePath, photoFile, { upsert: true }); // 'upsert: true' will overwrite if file exists
-            if (photoUploadError) throw photoUploadError;
+                .upload(photoFilePath, photoFile, { upsert: true });
+            if (photoUploadError) {
+                console.error("Photo upload error details:", photoUploadError); // Log specific upload error
+                throw photoUploadError;
+            }
             const { data: photoUrlData } = supabase.storage.from('application_files').getPublicUrl(photoUploadData.path);
-            
-            // --- 3. Upload Signature ---
-            // Convert the signature Data URL to a File
+            console.log("Photo uploaded to URL:", photoUrlData.publicUrl); // Debug log for photo URL
+
+            // --- 4. Upload Signature using the correct UUID ---
             const response = await fetch(signatureDataUrl);
             const blob = await response.blob();
             const signatureFile = new File([blob], `signature_${Date.now()}.png`, { type: "image/png" });
-            const signatureFilePath = `${session.user.id}/signature_${signatureFile.name}`;
-            
+            const signatureFilePath = `${supabaseUserId}/signature_${signatureFile.name}`;
+            console.log("Uploading signature to:", signatureFilePath); // Debug log for upload path
+
             const { data: sigUploadData, error: sigUploadError } = await supabase.storage
                 .from('application_files')
                 .upload(signatureFilePath, signatureFile, { upsert: true });
-            if (sigUploadError) throw sigUploadError;
+            if (sigUploadError) {
+                console.error("Signature upload error details:", sigUploadError); // Log specific upload error
+                throw sigUploadError;
+            }
             const { data: sigUrlData } = supabase.storage.from('application_files').getPublicUrl(sigUploadData.path);
+            console.log("Signature uploaded to URL:", sigUrlData.publicUrl); // Debug log for signature URL
 
-            // --- 4. Prepare and Insert Data ---
+            // --- 5. Prepare and Insert Data using the correct UUID ---
+            console.log("Preparing data for insertion with user_id:", supabaseUserId); // Debug log before insert
+            const insertPayload = {
+                user_id: supabaseUserId, // ✅ Use the UUID found in the lookup
+                applicant_name: formData.initial.name,
+                degree_applied_for: formData.initial.degree,
+                campus: formData.initial.campus,
+                application_date: formData.initial.date,
+                folder_link: formData.initial.folderLink,
+                full_address: formData.personalInfo.fullAddress,
+                mobile_number: formData.personalInfo.mobile,
+                email_address: formData.personalInfo.email,
+                goal_statement: formData.goals.statement,
+                degree_priorities: formData.goals.degrees,
+                creative_works: formData.creativeWorks,
+                lifelong_learning: formData.lifelongLearning,
+                self_assessment: formData.selfAssessment,
+                photo_url: photoUrlData.publicUrl,
+                signature_url: sigUrlData.publicUrl,
+            };
+            console.log("Insert Payload:", insertPayload); // Log the data being sent
+
             const { error: insertError } = await supabase
                 .from('applications')
-                .insert({
-                    user_id: session.user.id,
-                    applicant_name: formData.initial.name,
-                    degree_applied_for: formData.initial.degree,
-                    campus: formData.initial.campus,
-                    application_date: formData.initial.date,
-                    folder_link: formData.initial.folderLink,
-                    full_address: formData.personalInfo.fullAddress,
-                    mobile_number: formData.personalInfo.mobile,
-                    email_address: formData.personalInfo.email,
-                    goal_statement: formData.goals.statement,
-                    degree_priorities: formData.goals.degrees, // Stored as JSON
-                    creative_works: formData.creativeWorks, // Stored as JSON
-                    lifelong_learning: formData.lifelongLearning, // Stored as JSON
-                    self_assessment: formData.selfAssessment, // Stored as JSON
-                    photo_url: photoUrlData.publicUrl, // URL from storage
-                    signature_url: sigUrlData.publicUrl, // URL from storage
-                });
+                .insert(insertPayload);
 
-            if (insertError) throw insertError;
+            if (insertError) {
+                console.error("Database insert error details:", insertError); // Log specific insert error
+                throw insertError;
+            }
+            console.log("Data inserted successfully!"); // Debug log for success
 
-            // --- 5. Success ---
+            // --- 6. Success ---
             localStorage.removeItem('applicationFormData');
             localStorage.removeItem('applicationFormStep');
             nextStep(); // Move to success screen
 
         } catch (error) {
-            console.error("Error submitting application:", (error as Error).message);
+            // Catch errors from any step (lookup, upload, insert)
+            console.error("Error during submission process:", (error as Error).message);
             alert(`Submission failed: ${(error as Error).message}`);
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    // --- Render Logic ---
     const renderStep = () => {
+        // ... (Your existing renderStep logic, including the loading state)
         if (isSubmitting) {
             return (
                 <div className="bg-white shadow-lg rounded-2xl w-full max-w-3xl p-12 text-center">
