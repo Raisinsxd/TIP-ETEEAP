@@ -25,30 +25,30 @@ const getTodayDateISO = () => {
 
 // --- Pagination Component ---
 function Pagination({ currentStep, totalSteps, stepTitles }: { currentStep: number; totalSteps: number; stepTitles: string[] }) {
-  // ... (Your existing Pagination code)
-  if (currentStep > totalSteps + 1) return null;
-  const steps = stepTitles.map((title, index) => ({ number: index + 1, title }));
-  return (
-    <div className="w-full max-w-5xl mb-8">
-      <div className="flex items-start justify-center">
-        {steps.map((step, index) => {
-          const isActive = step.number === currentStep;
-          const isCompleted = step.number < currentStep;
-          return (
-            <div key={step.number} className="flex items-center">
-              <div className="flex flex-col items-center text-center">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold transition-colors duration-300 ${isActive ? "bg-yellow-500 text-white" : isCompleted ? "bg-green-500 text-white" : "bg-gray-200 text-gray-500"}`}>
-                  {isCompleted ? "✔" : step.number}
-                </div>
-                <p className={`mt-2 text-xs font-semibold w-20 ${isActive ? "text-yellow-600" : "text-gray-500"}`}>{step.title}</p>
-              </div>
-              {index < steps.length - 1 && (<div className={`w-24 border-t-2 transition-colors duration-300 ${isCompleted ? "border-green-500" : "border-gray-200"}`}></div>)}
+    // ... (Your existing Pagination code)
+    if (currentStep > totalSteps + 1) return null;
+    const steps = stepTitles.map((title, index) => ({ number: index + 1, title }));
+    return (
+        <div className="w-full max-w-5xl mb-8">
+            <div className="flex items-start justify-center">
+                {steps.map((step, index) => {
+                    const isActive = step.number === currentStep;
+                    const isCompleted = step.number < currentStep;
+                    return (
+                        <div key={step.number} className="flex items-center">
+                            <div className="flex flex-col items-center text-center">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold transition-colors duration-300 ${isActive ? "bg-yellow-500 text-white" : isCompleted ? "bg-green-500 text-white" : "bg-gray-200 text-gray-500"}`}>
+                                    {isCompleted ? "✔" : step.number}
+                                </div>
+                                <p className={`mt-2 text-xs font-semibold w-20 ${isActive ? "text-yellow-600" : "text-gray-500"}`}>{step.title}</p>
+                            </div>
+                            {index < steps.length - 1 && (<div className={`w-24 border-t-2 transition-colors duration-300 ${isCompleted ? "border-green-500" : "border-gray-200"}`}></div>)}
+                        </div>
+                    );
+                })}
             </div>
-          );
-        })}
-      </div>
-    </div>
-  );
+        </div>
+    );
 }
 
 // --- Success Screen Component ---
@@ -66,7 +66,7 @@ function SuccessScreen() {
 function FinalReviewStep({ nextStep, prevStep, signaturePadRef, isSubmitting }: {
     nextStep: () => void,
     prevStep: () => void,
-    signaturePadRef: React.RefObject<SignatureCanvas>,
+    signaturePadRef: React.RefObject<SignatureCanvas | null>,
     isSubmitting: boolean
 }) {
     const [signatureError, setSignatureError] = useState<string | null>(null);
@@ -91,7 +91,7 @@ function FinalReviewStep({ nextStep, prevStep, signaturePadRef, isSubmitting }: 
 
             <div className="pt-4 border-t border-gray-200">
                 <h3 className="font-bold text-lg mb-2 flex items-center text-gray-800">
-                    <PenTool size={20} className="mr-2 text-yellow-600"/>
+                    <PenTool size={20} className="mr-2 text-yellow-600" />
                     Applicant's Signature
                 </h3>
                 <div className="border rounded-lg overflow-hidden bg-gray-50">
@@ -217,16 +217,24 @@ export default function ApplicationFormPage() {
         try {
             // --- 2. Look up the Supabase UUID using the email ---
             // ⚠️ Make sure 'users' is the correct table name and 'id' is the column with the Supabase UUID
-            console.log(`Looking up user with email: ${session.user.email}`); // Debug log for lookup
+            console.log(`Looking up user with email: ${session.user.email}`);
+            
+
+
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('id')   // Select the Supabase UUID ('id' column)
-                .eq('email', session.user.email) // Match based on email
-                .single(); // Expect only one matching user
+                .select('id')
+                .eq('email', session.user.email)
+                .single();
 
-            if (userError || !userData?.id) {
-                console.error("User lookup error details:", userError); // Log the specific error
-                throw new Error(`Could not find a matching user in the database for email ${session.user.email}. RLS Policy on 'users' table might be blocking read access. Error: ${userError?.message || 'No user found'}`);
+            if (userError) {
+                console.error("Session User:", session.user);
+                console.error("User lookup error details:", userError);
+                throw new Error(`Database error: ${userError.message}`);
+            }
+
+            if (!userData?.id) {
+                throw new Error(`Could not find a matching user in the database for email ${session.user.email}. Please ensure your account is properly set up.`);
             }
             const supabaseUserId = userData.id; // This is the correct UUID
             console.log("Found Supabase User UUID:", supabaseUserId); // Debug log for found UUID
