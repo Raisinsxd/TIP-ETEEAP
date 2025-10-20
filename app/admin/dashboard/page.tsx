@@ -9,7 +9,8 @@ import AdminManagement from "./adminmanage";
 import UserManage from "./usermanage";
 import ApplicantsManage from "./applicantsmanage";
 import UserLoginsManage from "./userlogins";
-import ForcePasswordChange from "./ForcePasswordChange"; // Import the password change component
+import ForcePasswordChange from "./ForcePasswordChange";
+import DashboardHome from "./DashboardHome"; // Import the new dashboard component
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -26,7 +27,7 @@ export interface GoogleUser {
 type TabName = "Home" | "AdminLogins" | "Applicants" | "UserLogins" | "AdminManagement";
 
 const tabs: { [key in TabName]: { title: string; component: ComponentType<any> | null } } = {
-  Home: { title: "Home", component: null },
+  Home: { title: "Dashboard", component: DashboardHome },
   AdminLogins: { title: "Admin Login History", component: UserManage },
   Applicants: { title: "Applicant Submissions", component: ApplicantsManage },
   UserLogins: { title: "User Login History", component: UserLoginsManage },
@@ -64,12 +65,6 @@ export default function DashboardPage() {
       .eq("id", session.user.id)
       .single();
 
-    if (profileError || !profile) {
-      console.error("Could not fetch admin profile:", profileError);
-      await supabase.auth.signOut();
-      router.replace("/admin");
-      return;
-    }
     
     setCurrentUser(profile);
     setLoading(false);
@@ -155,14 +150,14 @@ export default function DashboardPage() {
         <main className="flex-1 p-8 bg-gray-50 overflow-y-auto">
           {activeTab === "Home" ? (
             <div>
-              <h2 className="text-3xl font-bold text-gray-800">Welcome to the Admin Panel</h2>
-              <p className="text-gray-600 mt-2">Select a tab from the sidebar to manage your application.</p>
+              <h2 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h2>
+              {ActiveComponent && <ActiveComponent />}
             </div>
           ) : (
             <div className="space-y-6">
               <h2 className="text-3xl font-bold text-gray-800">{pageTitle}</h2>
               <div className="bg-white p-6 rounded-xl shadow-md border border-gray-200">
-                {ActiveComponent && <ActiveComponent {...componentProps[activeTab]} />}
+                {ActiveComponent && <ActiveComponent {...(componentProps[activeTab] || {})} />}
               </div>
             </div>
           )}
