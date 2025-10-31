@@ -1,4 +1,4 @@
-// appform/b.tsx  change to personal information
+// appform/b.tsx
 "use client";
 
 import { useState } from "react";
@@ -16,38 +16,31 @@ export default function PersonalInformationForm({
 }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // ✅ FIX: Flatten the state. Save directly to the formData object.
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev: any) => ({
       ...prev,
-      personalInfo: { ...prev.personalInfo, [name]: value },
+      [name]: value,
     }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
   const validateAndProceed = () => {
     const newErrors: Record<string, string> = {};
-    const { fullAddress, mobile, email } = formData.personalInfo;
+    
+    // ✅ FIX: Read from the flattened and correctly named formData properties
+    const { fullAddress, mobileNumber, emailAddress } = formData;
 
-    // Full Address
-    if (!fullAddress || !fullAddress.trim())
-      newErrors.fullAddress = "Full address is required.";
-    else if (fullAddress.length < 5)
-      newErrors.fullAddress = "Please enter a complete address.";
+    if (!fullAddress?.trim()) newErrors.fullAddress = "Full address is required.";
 
-    // Mobile
-    if (!mobile || !mobile.trim()) newErrors.mobile = "Mobile number is required.";
-    else if (!/^[0-9]+$/.test(mobile))
-      newErrors.mobile = "Mobile number must contain digits only.";
-    else if (mobile.length !== 11)
-      newErrors.mobile = "Mobile number must be 11 digits (e.g., 09XXXXXXXXX).";
+    if (!mobileNumber?.trim()) newErrors.mobileNumber = "Mobile number is required.";
+    else if (!/^\d{11}$/.test(mobileNumber))
+      newErrors.mobileNumber = "Mobile number must be 11 digits.";
 
-    // Email
-    if (!email || !email.trim()) newErrors.email = "Email is required.";
-    else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    )
-      newErrors.email = "Please enter a valid email address.";
+    if (!emailAddress?.trim()) newErrors.emailAddress = "Email is required.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress))
+      newErrors.emailAddress = "Please enter a valid email address.";
 
     setErrors(newErrors);
 
@@ -74,7 +67,7 @@ export default function PersonalInformationForm({
             </label>
             <input
               name="fullAddress"
-              value={formData.personalInfo.fullAddress}
+              value={formData.fullAddress || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg p-2 text-black ${
                 errors.fullAddress ? "border-red-500" : "border-gray-400"
@@ -91,16 +84,18 @@ export default function PersonalInformationForm({
               Mobile Number:
             </label>
             <input
-              name="mobile"
-              value={formData.personalInfo.mobile}
+              // ✅ FIX: Use the key d.tsx expects
+              name="mobileNumber"
+              value={formData.mobileNumber || ""}
               onChange={handleChange}
               maxLength={11}
+              placeholder="09XXXXXXXXX"
               className={`w-full border rounded-lg p-2 text-black ${
-                errors.mobile ? "border-red-500" : "border-gray-400"
+                errors.mobileNumber ? "border-red-500" : "border-gray-400"
               }`}
             />
-            {errors.mobile && (
-              <p className="text-red-500 text-sm mt-1">{errors.mobile}</p>
+            {errors.mobileNumber && (
+              <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>
             )}
           </div>
 
@@ -110,16 +105,17 @@ export default function PersonalInformationForm({
               Email:
             </label>
             <input
-              name="email"
+              // ✅ FIX: Use the key d.tsx expects
+              name="emailAddress"
               type="email"
-              value={formData.personalInfo.email}
+              value={formData.emailAddress || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg p-2 text-black ${
-                errors.email ? "border-red-500" : "border-gray-400"
+                errors.emailAddress ? "border-red-500" : "border-gray-400"
               }`}
             />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            {errors.emailAddress && (
+              <p className="text-red-500 text-sm mt-1">{errors.emailAddress}</p>
             )}
           </div>
         </div>
