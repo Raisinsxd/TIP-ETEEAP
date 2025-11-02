@@ -1,9 +1,7 @@
 "use client";
 import Link from "next/link";
 
-// 1. Define the props type using 'any' to bypass the build-time
-//    type mismatch. This is a workaround for the 'Promise<any>'
-//    error you're seeing in the Vercel build logs.
+// Use the 'any' type to bypass the Vercel build-time type mismatch.
 type AuthErrorPageProps = {
   params: any;
   searchParams: any;
@@ -11,7 +9,6 @@ type AuthErrorPageProps = {
 
 export default function AuthErrorPage({ params, searchParams }: AuthErrorPageProps) {
   
-  // 2. Safely get the error message, since the type is 'any'
   const getErrorMessage = () => {
     try {
       const errorParam = searchParams?.error;
@@ -33,7 +30,7 @@ export default function AuthErrorPage({ params, searchParams }: AuthErrorPagePro
 
       <p className="text-red-400 mb-6">
         Something went wrong: <span className="font-semibold">{errorMessage}</span>
-      </Gallery>
+      </p> {/* ✅ This line is now fixed */}
 
       {/* Go Back Home Button */}
       <Link
