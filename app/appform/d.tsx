@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState, ReactNode } from "react";
 import { Plus, Minus } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
@@ -99,12 +99,12 @@ type ResearchEntry = {
   dates: string;
   description: string;
 };
+
+/* ---------------- Validation types (fixed) ---------------- */
+type FieldErrors = Partial<Record<keyof EducationEntry, string>>;
+type EducationErrors = Partial<Record<keyof EducationState, FieldErrors[]>>;
 type ValidationErrors = {
-  education?: {
-    tertiary?: any[];
-    secondary?: any[];
-    elementary?: any[];
-  };
+  education?: EducationErrors;
 };
 
 /* ---------------- Reusable Helper Components ---------------- */
@@ -115,7 +115,7 @@ function AccordionItem({
   defaultOpen = false,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -186,7 +186,7 @@ function FormalEducationSection({
   ) => void;
   onAdd: (level: keyof EducationState) => void;
   onRemove: (level: keyof EducationState, index: number) => void;
-  errors: ValidationErrors["education"];
+  errors?: ValidationErrors["education"];
   hasNoTechnical: boolean;
   onHasNoTechnicalChange: () => void;
 }) {
@@ -255,7 +255,7 @@ function FormalEducationSection({
                         className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
                       />
                       <FieldError
-                        message={errors?.[key]?.[idx]?.schoolName}
+                        message={errors?.[key]?.[idx]?.schoolName as string}
                       />
                     </div>
                     <div className="col-span-2">
@@ -272,7 +272,7 @@ function FormalEducationSection({
                         className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
                       />
                       <FieldError
-                        message={errors?.[key]?.[idx]?.schoolAddress}
+                        message={errors?.[key]?.[idx]?.schoolAddress as string}
                       />
                     </div>
                     {key !== "secondary" && key !== "elementary" && (
@@ -292,7 +292,7 @@ function FormalEducationSection({
                           className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
                         />
                         <FieldError
-                          message={errors?.[key]?.[idx]?.degreeProgram}
+                          message={errors?.[key]?.[idx]?.degreeProgram as string}
                         />
                       </div>
                     )}
@@ -316,7 +316,7 @@ function FormalEducationSection({
                         className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
                       />
                       <FieldError
-                        message={errors?.[key]?.[idx]?.yearGraduated}
+                        message={errors?.[key]?.[idx]?.yearGraduated as string}
                       />
                     </div>
                     <div className="col-span-2">
@@ -332,7 +332,7 @@ function FormalEducationSection({
                         }
                         className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
                       />
-                      <FieldError message={errors?.[key]?.[idx]?.dates} />
+                      <FieldError message={errors?.[key]?.[idx]?.dates as string} />
                     </div>
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
@@ -1318,19 +1318,19 @@ export default function BackgroundAchievementsForm({
     if (category === "memberships") {
       setMemberships((prev) => {
         const updated = [...prev];
-        updated[index] = { ...updated[index], [field]: value };
+        updated[index] = { ...(updated[index] as any), [field]: value } as MembershipEntry;
         return updated;
       });
     } else if (category === "projects") {
       setProjects((prev) => {
         const updated = [...prev];
-        updated[index] = { ...updated[index], [field]: value };
+        updated[index] = { ...(updated[index] as any), [field]: value } as ProjectEntry;
         return updated;
       });
     } else {
       setResearch((prev) => {
         const updated = [...prev];
-        updated[index] = { ...updated[index], [field]: value };
+        updated[index] = { ...(updated[index] as any), [field]: value } as ResearchEntry;
         return updated;
       });
     }
@@ -1672,4 +1672,3 @@ export default function BackgroundAchievementsForm({
     </div>
   );
 }
-
