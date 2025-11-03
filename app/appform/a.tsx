@@ -1,4 +1,3 @@
-// appform/a.tsx
 "use client";
 
 import { useState } from "react";
@@ -18,7 +17,6 @@ export default function InitialForm({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ✅ FIX: Flatten the state. Save directly to the formData object.
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
@@ -34,7 +32,6 @@ export default function InitialForm({
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Basic validation
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
         setErrors((prev) => ({
           ...prev,
@@ -44,7 +41,6 @@ export default function InitialForm({
       }
 
       setPhotoPreview(URL.createObjectURL(file));
-      // ✅ FIX: Save the file object with a clear name
       setFormData((prev: any) => ({
         ...prev,
         photoFile: file,
@@ -56,7 +52,6 @@ export default function InitialForm({
   const validateAndProceed = () => {
     const newErrors: Record<string, string> = {};
     
-    // ✅ FIX: Read from the flattened and correctly named formData properties
     const { applicantName, degreeAppliedFor, campus, folderLink, photoFile } = formData;
 
     if (!applicantName?.trim()) newErrors.applicantName = "Name is required.";
@@ -99,7 +94,6 @@ export default function InitialForm({
             </label>
             <input
               type="text"
-              // ✅ FIX: Use the key d.tsx expects
               name="applicantName"
               value={formData.applicantName || ""}
               onChange={handleChange}
@@ -119,7 +113,6 @@ export default function InitialForm({
                 Degree Applied For:
               </label>
               <select
-                // ✅ FIX: Use the key d.tsx expects
                 name="degreeAppliedFor"
                 value={formData.degreeAppliedFor || ""}
                 onChange={handleChange}
@@ -151,6 +144,7 @@ export default function InitialForm({
               )}
             </div>
           </div>
+        </div> 
 
         {/* Photo */}
         <div className="flex flex-col items-center justify-center">
