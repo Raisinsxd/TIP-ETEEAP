@@ -8,12 +8,13 @@ export default function InitialForm({
   setFormData,
   nextStep,
 }: {
-  formData: any;
+  formData: any; // Receives the full state { initial: {...}, personalInfo: {...}, ... }
   setFormData: Function;
   nextStep: () => void;
 }) {
   const [photoPreview, setPhotoPreview] = useState<string | null>(
-    formData.photoFile ? URL.createObjectURL(formData.photoFile) : null
+    // ✅ FIX: Read from formData.initial.photo
+    formData.initial.photo ? URL.createObjectURL(formData.initial.photo) : null
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -21,11 +22,14 @@ export default function InitialForm({
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
+    // ✅ FIX: Save data inside the 'initial' object
     setFormData((prev: any) => ({
       ...prev,
-      [name]: value,
+      initial: {
+        ...prev.initial,
+        [name]: value, // e.g., 'name': 'John Doe'
+      }
     }));
-    // Clear error on change
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
@@ -35,35 +39,41 @@ export default function InitialForm({
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
         setErrors((prev) => ({
           ...prev,
-          photoFile: "Image size must be less than 2MB.",
+          photo: "Image size must be less than 2MB.", // ✅ FIX: Use 'photo'
         }));
         return;
       }
 
       setPhotoPreview(URL.createObjectURL(file));
+      // ✅ FIX: Save the file object to 'initial.photo'
       setFormData((prev: any) => ({
         ...prev,
-        photoFile: file,
+        initial: {
+          ...prev.initial,
+          photo: file,
+        }
       }));
-      if (errors.photoFile) setErrors((prev) => ({ ...prev, photoFile: "" }));
+      if (errors.photo) setErrors((prev) => ({ ...prev, photo: "" }));
     }
   };
 
   const validateAndProceed = () => {
     const newErrors: Record<string, string> = {};
     
-    const { applicantName, degreeAppliedFor, campus, folderLink, photoFile } = formData;
+    // ✅ FIX: Read from the nested 'initial' object
+    const { name, degree, campus, folderLink, photo } = formData.initial;
 
-    if (!applicantName?.trim()) newErrors.applicantName = "Name is required.";
-    if (!degreeAppliedFor) newErrors.degreeAppliedFor = "Degree is required.";
+    // ✅ FIX: Validate the correct property names
+    if (!name?.trim()) newErrors.name = "Name is required.";
+    if (!degree) newErrors.degree = "Degree is required.";
     if (!campus) newErrors.campus = "Campus is required.";
-    if (!photoFile) newErrors.photoFile = "Photo is required.";
+    if (!photo) newErrors.photo = "Photo is required.";
 
     if (!folderLink?.trim()) {
       newErrors.folderLink = "Folder link is required.";
     } else {
       try {
-        new URL(folderLink); // Simple check for valid URL format
+        new URL(folderLink);
       } catch {
         newErrors.folderLink = "Invalid URL format.";
       }
@@ -94,15 +104,16 @@ export default function InitialForm({
             </label>
             <input
               type="text"
-              name="applicantName"
-              value={formData.applicantName || ""}
+              // ✅ FIX: Use 'name'
+              name="name" 
+              value={formData.initial.name || ""} // ✅ FIX: Read from initial
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-black ${
-                errors.applicantName ? "border-red-500" : "border-gray-400"
+                errors.name ? "border-red-500" : "border-gray-400" // ✅ FIX: Check errors.name
               }`}
             />
-            {errors.applicantName && (
-              <p className="text-red-500 text-sm mt-1">{errors.applicantName}</p>
+            {errors.name && ( // ✅ FIX: Check errors.name
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p>
             )}
           </div>
 
@@ -113,34 +124,29 @@ export default function InitialForm({
                 Degree Applied For:
               </label>
               <select
-                name="degreeAppliedFor"
-                value={formData.degreeAppliedFor || ""}
+                // ✅ FIX: Use 'degree'
+                name="degree"
+                value={formData.initial.degree || ""} // ✅ FIX: Read from initial
                 onChange={handleChange}
                 className={`w-full border rounded-lg px-3 py-2 text-black ${
-                  errors.degreeAppliedFor ? "border-red-500" : "border-gray-400"
+                  errors.degree ? "border-red-500" : "border-gray-400" // ✅ FIX: Check errors.degree
                 }`}
               >
                 <option value="">Select degree</option>
                 <option value="BSCS">BSCS (Computer Science)</option>
-                
-                {/* --- Here are the new options --- */}
                 <option value="BSIS">BSIS (Information Systems)</option>
                 <option value="BSIT">BSIT (Information Technology)</option>
                 <option value="BSCpE">BSCpE (Computer Engineering)</option>
                 <option value="BSIE">BSIE (Industrial Engineering)</option>
-
-                {/* Using optgroup to match the grouping in your image */}
                 <optgroup label="Bachelor of Science in Business Administration">
                   <option value="BSBA-LSCM">BSBA (Logistics and Supply Chain Management)</option>
                   <option value="BSBA-FM">BSBA (Financial Management)</option>
                   <option value="BSBA-HRM">BSBA (Human Resources Management)</option>
                   <option value="BSBA-MM">BSBA (Marketing Management)</option>
                 </optgroup>
-                {/* --- End of new options --- */}
-
               </select>
-              {errors.degreeAppliedFor && (
-                <p className="text-red-500 text-sm mt-1">{errors.degreeAppliedFor}</p>
+              {errors.degree && ( // ✅ FIX: Check errors.degree
+                <p className="text-red-500 text-sm mt-1">{errors.degree}</p>
               )}
             </div>
           </div>
@@ -151,7 +157,7 @@ export default function InitialForm({
           <label
             htmlFor="photo-upload"
             className={`w-20 h-20 rounded-full bg-yellow-400 flex items-center justify-center cursor-pointer overflow-hidden ${
-              errors.photoFile ? "ring-2 ring-red-500" : ""
+              errors.photo ? "ring-2 ring-red-500" : "" // ✅ FIX: Check errors.photo
             }`}
           >
             {photoPreview ? (
@@ -172,8 +178,8 @@ export default function InitialForm({
             className="hidden"
           />
           <p className="text-sm mt-2 text-black">Add Photo</p>
-          {errors.photoFile && (
-            <p className="text-red-500 text-sm mt-1">{errors.photoFile}</p>
+          {errors.photo && ( // ✅ FIX: Check errors.photo
+            <p className="text-red-500 text-sm mt-1">{errors.photo}</p>
           )}
         </div>
       </div>
@@ -185,7 +191,7 @@ export default function InitialForm({
         </label>
         <select
           name="campus"
-          value={formData.campus || ""}
+          value={formData.initial.campus || ""} // ✅ FIX: Read from initial
           onChange={handleChange}
           className={`w-full border rounded-lg px-3 py-2 text-black ${
             errors.campus ? "border-red-500" : "border-gray-400"
@@ -208,7 +214,7 @@ export default function InitialForm({
         <input
           type="url"
           name="folderLink"
-          value={formData.folderLink || ""}
+          value={formData.initial.folderLink || ""} // ✅ FIX: Read from initial
           onChange={handleChange}
           className={`w-full border rounded-lg px-3 py-2 text-black ${
             errors.folderLink ? "border-red-500" : "border-gray-400"
