@@ -15,12 +15,12 @@ import {
 
 const baseUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
-  : 'http://localhost:3000'; 
+  : 'tip-eteeap.vercel.app'; 
 
-const logoUrl = `${baseUrl}/assets/TIPLogo.png`;
-const fbUrl = `${baseUrl}/assets/FB.png`;
-const xUrl = `${baseUrl}/assets/X.png`;
-const igUrl = `${baseUrl}/assets/IG.png`;
+const logoUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/TIPLogo.png`;
+const fbUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/FB.png`;
+const xUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/X.png`;
+const igUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/IG.png`;
 
 interface EmailTemplateProps {
   subject: string;
