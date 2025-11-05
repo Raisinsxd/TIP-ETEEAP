@@ -1410,16 +1410,22 @@ export default function BackgroundAchievementsForm({
     return isValid;
   };
 
-  const handleSubmit = async () => {
+  // This function now correctly saves the data to the parent state and moves to the next step.
+  // It no longer tries to submit to Supabase.
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     setSubmitError(null);
+
+    // Run your validation first
     if (!validateForm()) {
       setSubmitError(
         "Please fill in all required fields marked with an asterisk (*)."
       );
       return;
     }
+
     setIsSubmitting(true);
 
+    // Prepare all the data from this step's internal state
     const finalEducationData = { ...education };
     if (hasNoTechnical) {
       finalEducationData.technical = [];
@@ -1430,40 +1436,12 @@ export default function BackgroundAchievementsForm({
       projects: hasNoProfDev ? [] : projects,
       research: hasNoProfDev ? [] : research,
     };
-    const {
-      applicantName,
-      degreeAppliedFor,
-      campus,
-      folderLink,
-      photoUrl,
-      fullAddress,
-      mobileNumber,
-      emailAddress,
-      goals,
-      degreePriorities,
-      creativeWorks,
-      signatureUrl,
-      lifelongLearning,
-      selfAssessment,
-    } = formData;
-    const submissionData = {
-      applicant_name: applicantName,
-      degree_applied_for: degreeAppliedFor,
-      campus: campus,
-      folder_link: folderLink,
-      photo_url: photoUrl,
-      full_address: fullAddress,
-      mobile_number: mobileNumber,
-      email_address: emailAddress,
-      goal_statement: goals,
-      degree_priorities: degreePriorities,
-      creative_works: creativeWorks,
-      signature_url: signatureUrl,
-      lifelong_learning: lifelongLearning,
-      self_assessment: selfAssessment,
 
+    // Update the main state in appform/page.tsx using the setFormData prop
+    setFormData((prev: any) => ({
+      ...prev,
+      // This saves all the data from this step into the main state
       education_background: finalEducationData,
-
       non_formal_education: hasNoNonFormal ? [] : nonFormal,
       certifications: hasNoCertifications ? [] : certifications,
       publications: hasNoPublications ? [] : publications,
@@ -1471,20 +1449,11 @@ export default function BackgroundAchievementsForm({
       work_experiences: hasNoWork ? [] : work,
       recognitions: hasNoRecognitions ? [] : recognitions,
       professional_development: professional_development,
-    };
+    }));
 
-    try {
-      const { error } = await supabase
-        .from("applications")
-        .insert([submissionData]);
-      if (error) throw error;
-      nextStep();
-    } catch (error: any) {
-      console.error("Supabase submission error:", error);
-      setSubmitError(`Submission failed: ${error.message}.`);
-    } finally {
-      setIsSubmitting(false);
-    }
+    // We're done! Move to the next step.
+    setIsSubmitting(false);
+    nextStep();
   };
 
   return (

@@ -1,11 +1,10 @@
-// appform/b.tsx
 "use client";
 
 import { useState } from "react";
 
 export default function PersonalInformationForm({
-  formData,
-  setFormData,
+  formData, // This is NOW formData.personalInfo, e.g., { fullAddress: ..., mobile: ..., email: ... }
+  setFormData, // This is NOW handlePersonalChange
   nextStep,
   prevStep,
 }: {
@@ -16,31 +15,37 @@ export default function PersonalInformationForm({
 }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ✅ FIX: Flatten the state. Save directly to the formData object.
+  // 🔽🔽🔽 --- FIX #1: Correct handleChange --- 🔽🔽🔽
+  // We must pass the NEW 'personalInfo' object to setFormData, not a function
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({
-      ...prev,
+    setFormData({
+      ...formData,
       [name]: value,
-    }));
+    });
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  // 🔽🔽🔽 --- FIX #2: Correct validateAndProceed --- 🔽🔽🔽
   const validateAndProceed = () => {
     const newErrors: Record<string, string> = {};
     
-    // ✅ FIX: Read from the flattened and correctly named formData properties
-    const { fullAddress, mobileNumber, emailAddress } = formData;
+    // Read 'mobile' and 'email' (must match the state in page.tsx)
+    const { fullAddress, mobile, email } = formData;
 
     if (!fullAddress?.trim()) newErrors.fullAddress = "Full address is required.";
 
-    if (!mobileNumber?.trim()) newErrors.mobileNumber = "Mobile number is required.";
-    else if (!/^\d{11}$/.test(mobileNumber))
-      newErrors.mobileNumber = "Mobile number must be 11 digits.";
+    if (!mobile?.trim()) {
+      newErrors.mobile = "Mobile number is required.";
+    } else if (!/^(09|\+639)\d{9}$/.test(mobile)) { // Use a regex for PH numbers
+       newErrors.mobile = "Please enter a valid PH mobile number (e.g., 09xxxxxxxxx).";
+    }
 
-    if (!emailAddress?.trim()) newErrors.emailAddress = "Email is required.";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress))
-      newErrors.emailAddress = "Please enter a valid email address.";
+    if (!email?.trim()) {
+      newErrors.email = "Email is required.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = "Please enter a valid email address.";
+    }
 
     setErrors(newErrors);
 
@@ -59,6 +64,7 @@ export default function PersonalInformationForm({
           A. Personal Information
         </h3>
 
+        {/* 🔽🔽🔽 --- FIX #3: Correct JSX name, value, and error props --- 🔽🔽🔽 */}
         <div className="grid grid-cols-2 gap-4">
           {/* Full Address */}
           <div className="col-span-2">
@@ -84,18 +90,18 @@ export default function PersonalInformationForm({
               Mobile Number:
             </label>
             <input
-              // ✅ FIX: Use the key d.tsx expects
-              name="mobileNumber"
-              value={formData.mobileNumber || ""}
+              name="mobile" // Use 'mobile'
+              type="tel"
+              value={formData.mobile || ""} // Use 'mobile'
               onChange={handleChange}
-              maxLength={11}
+              maxLength={13} // Allow for +63
               placeholder="09XXXXXXXXX"
               className={`w-full border rounded-lg p-2 text-black ${
-                errors.mobileNumber ? "border-red-500" : "border-gray-400"
+                errors.mobile ? "border-red-500" : "border-gray-400" // Use 'mobile'
               }`}
             />
-            {errors.mobileNumber && (
-              <p className="text-red-500 text-sm mt-1">{errors.mobileNumber}</p>
+            {errors.mobile && (
+              <p className="text-red-500 text-sm mt-1">{errors.mobile}</p> // Use 'mobile'
             )}
           </div>
 
@@ -105,20 +111,20 @@ export default function PersonalInformationForm({
               Email:
             </label>
             <input
-              // ✅ FIX: Use the key d.tsx expects
-              name="emailAddress"
+              name="email" // Use 'email'
               type="email"
-              value={formData.emailAddress || ""}
+              value={formData.email || ""} // Use 'email'
               onChange={handleChange}
               className={`w-full border rounded-lg p-2 text-black ${
-                errors.emailAddress ? "border-red-500" : "border-gray-400"
+                errors.email ? "border-red-500" : "border-gray-400" // Use 'email'
               }`}
             />
-            {errors.emailAddress && (
-              <p className="text-red-500 text-sm mt-1">{errors.emailAddress}</p>
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p> // Use 'email'
             )}
           </div>
         </div>
+        {/* 🔼🔼🔼 --- END OF FIXES --- 🔼🔼🔼 */}
       </div>
 
       <div className="flex justify-between p-6">
@@ -140,3 +146,4 @@ export default function PersonalInformationForm({
     </form>
   );
 }
+

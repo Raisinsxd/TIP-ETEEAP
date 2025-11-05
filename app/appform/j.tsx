@@ -6,24 +6,36 @@ export default function LifelongLearningForm({
   nextStep,
   prevStep,
 }: {
-  formData: any;
-  setFormData: Function;
+  formData: any; // This prop is *actually* the lifelongLearning object
+  setFormData: (data: any) => void; // This prop is handleLearningChange
   nextStep: () => void;
   prevStep: () => void;
 }) {
+  // ✅ FIX: The 'setFormData' prop is handleLearningChange, 
+  // which expects the new lifelongLearning object.
+  // 'formData' *is* the lifelongLearning object.
   const handleChange = (
     e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({
-      ...prev,
-      lifelongLearning: { ...prev.lifelongLearning, [name]: value },
-    }));
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
   };
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     nextStep();
+  };
+
+  // ✅ FIX: Add a default object to prevent errors if formData is undefined on load
+  const data = formData || {
+    hobbies: "",
+    skills: "",
+    workActivities: "",
+    volunteer: "",
+    travels: "",
   };
 
   return (
@@ -61,7 +73,8 @@ export default function LifelongLearningForm({
             name="hobbies"
             rows={3}
             required
-            value={formData.lifelongLearning.hobbies}
+            // ✅ FIX: Read from data.hobbies
+            value={data.hobbies}
             onChange={handleChange}
             className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
           />
@@ -80,7 +93,8 @@ export default function LifelongLearningForm({
             name="skills"
             rows={3}
             required
-            value={formData.lifelongLearning.skills}
+            // ✅ FIX: Read from data.skills
+            value={data.skills}
             onChange={handleChange}
             className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
           />
@@ -100,7 +114,8 @@ export default function LifelongLearningForm({
             name="workActivities"
             rows={3}
             required
-            value={formData.lifelongLearning.workActivities}
+            // ✅ FIX: Read from data.workActivities
+            value={data.workActivities}
             onChange={handleChange}
             className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
           />
@@ -120,7 +135,8 @@ export default function LifelongLearningForm({
             name="volunteer"
             rows={3}
             required
-            value={formData.lifelongLearning.volunteer}
+            // ✅ FIX: Read from data.volunteer
+            value={data.volunteer}
             onChange={handleChange}
             className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
           />
@@ -139,7 +155,8 @@ export default function LifelongLearningForm({
             name="travels"
             rows={3}
             required
-            value={formData.lifelongLearning.travels}
+            // ✅ FIX: Read from data.travels
+            value={data.travels}
             onChange={handleChange}
             className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
           />

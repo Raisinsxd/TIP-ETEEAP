@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Minus } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type CreativeWork = {
   title: string;
@@ -15,38 +15,65 @@ export default function CreativeWorksForm({
   nextStep,
   prevStep,
 }: {
-  formData: any;
-  setFormData: Function;
+  formData: any; // This prop is ACTUALLY the creativeWorks array
+  setFormData: (data: CreativeWork[]) => void; // This prop is handleCreativeWorksChange
   nextStep: () => void;
   prevStep: () => void;
 }) {
-  const works: CreativeWork[] = formData.creativeWorks || [];
-  const [isNone, setIsNone] = useState(false);
+  // ✅ FIX: 'formData' prop *is* the array.
+  // We ensure it's an array, or default to an empty one.
+  const works: CreativeWork[] = Array.isArray(formData) ? formData : [];
 
-  // ✅ Validation errors
-const [errors, setErrors] = useState<{ form?: string }>({});
-
-const validateAndProceed = () => {
-  const hasFilledWork = works.some(
-    (work) =>
-      work.title.trim() !== "" ||
-      work.institution.trim() !== "" ||
-      work.dates.trim() !== ""
+  // ✅ FIX: Ensure 'isNone' reflects the state of 'works' when loaded
+  const [isNone, setIsNone] = useState(
+    works.length === 1 &&
+      works[0].title === "" &&
+      works[0].institution === "" &&
+      works[0].dates === ""
   );
 
-  if (!isNone && !hasFilledWork) {
-    setErrors({
-      form: "Please fill in at least one Creative Work or click 'None' if not applicable.",
-    });
-    return;
-  }
+  // Sync 'isNone' if the works array is ever reset from outside
+  useEffect(() => {
+    const isActuallyNone =
+      works.length === 1 &&
+      works[0].title === "" &&
+      works[0].institution === "" &&
+      works[0].dates === "";
+    // Only set 'isNone' if the works are empty, otherwise keep user's 'None' toggle
+    if (isActuallyNone) {
+      setIsNone(true);
+    } else if (works.length > 1) {
+      setIsNone(false);
+    }
+  }, [works]);
 
-  setErrors({});
-  nextStep();
-};
 
+  // ✅ Validation errors
+  const [errors, setErrors] = useState<{ form?: string }>({});
 
-  // Update individual work field
+  const validateAndProceed = () => {
+    const hasFilledWork = works.some(
+      (work) =>
+        work.title.trim() !== "" ||
+        work.institution.trim() !== "" ||
+        work.dates.trim() !== ""
+    );
+
+    // If 'isNone' is checked, OR there is filled work, it's valid.
+    if (isNone || hasFilledWork) {
+      setErrors({});
+      // If 'isNone', submit an empty array. Otherwise submit the works.
+      nextStep();
+    } else {
+      // Only show error if 'isNone' is NOT checked AND no work is filled
+      setErrors({
+        form: "Please fill in at least one Creative Work or click 'None' if not applicable.",
+      });
+      return;
+    }
+  };
+
+  // ✅ FIX: 'setFormData' is a function that just takes the new array.
   const handleWorkChange = (
     index: number,
     field: keyof CreativeWork,
@@ -54,45 +81,41 @@ const validateAndProceed = () => {
   ) => {
     const updated = [...works];
     updated[index] = { ...updated[index], [field]: value };
-    setFormData((prev: any) => ({ ...prev, creativeWorks: updated }));
+    setFormData(updated); // Just pass the new array
   };
 
-  // Add new creative work (turn off None)
+  // ✅ FIX: 'setFormData' just takes the new array.
   const addWork = () => {
     setIsNone(false);
-    setFormData((prev: any) => ({
-      ...prev,
-      creativeWorks: [
-        ...(prev.creativeWorks || []),
-        { title: "", institution: "", dates: "" },
-      ],
-    }));
+    const updated = [
+      ...works,
+      { title: "", institution: "", dates: "" },
+    ];
+    setFormData(updated); // Just pass the new array
   };
 
-  // Remove a creative work
+  // ✅ FIX: 'setFormData' just takes the new array.
   const removeWork = (index: number) => {
-    const updated = works.filter((_, i) => i !== index);
+    let updated = works.filter((_, i) => i !== index);
     if (updated.length === 0) {
       // restore one blank form to keep structure
-      setFormData((prev: any) => ({
-        ...prev,
-        creativeWorks: [{ title: "", institution: "", dates: "" }],
-      }));
-    } else {
-      setFormData((prev: any) => ({ ...prev, creativeWorks: updated }));
+      updated = [{ title: "", institution: "", dates: "" }];
+      setIsNone(true); // If all are removed, we are in a 'None' state
     }
+    setFormData(updated); // Just pass the new array
   };
 
-  // Toggle None/Edit (for first card only)
+  // ✅ FIX: 'setFormData' just takes the new array.
   const toggleNone = () => {
-    setIsNone((prev) => !prev);
-    if (!isNone) {
-      // clear form when setting to None
-      setFormData((prev: any) => ({
-        ...prev,
-        creativeWorks: [{ title: "", institution: "", dates: "" }],
-      }));
+    const newIsNone = !isNone;
+    setIsNone(newIsNone);
+
+    if (newIsNone) {
+      // If user clicks "None", clear the form.
+      setFormData([{ title: "", institution: "", dates: "" }]);
     }
+    // If user clicks "Edit" (toggling from true to false), just toggle the state.
+    // They can start typing.
   };
 
   // Alert if user tries typing while on None
@@ -110,6 +133,9 @@ const validateAndProceed = () => {
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-gray-100 p-6">
+      {/* This <form> tag doesn't need an onSubmit, 
+        as the Next button is type="button" and has its own onClick.
+      */}
       <form className="bg-white shadow-lg rounded-2xl w-full max-w-3xl flex flex-col">
         <h2 className="text-center font-bold text-xl mt-4 mb-2 text-black">
           APPLICATION FORM AND PRELIMINARY ASSESSMENT FORM
@@ -151,7 +177,7 @@ const validateAndProceed = () => {
                     handleWorkChange(idx, "title", e.target.value)
                   }
                   disabled={isNone}
-                  className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white disabled:bg-gray-200 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -169,7 +195,7 @@ const validateAndProceed = () => {
                     handleWorkChange(idx, "institution", e.target.value)
                   }
                   disabled={isNone}
-                  className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white disabled:bg-gray-200 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -187,7 +213,7 @@ const validateAndProceed = () => {
                     handleWorkChange(idx, "dates", e.target.value)
                   }
                   disabled={isNone}
-                  className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white disabled:bg-gray-200 disabled:cursor-not-allowed"
                 />
               </div>
 
@@ -200,7 +226,6 @@ const validateAndProceed = () => {
                       <button
                         type="button"
                         onClick={toggleNone}
-                        disabled={multipleCards}
                         className={`${
                           isNone
                             ? "bg-blue-500 hover:bg-blue-600"
@@ -240,28 +265,29 @@ const validateAndProceed = () => {
         </div>
 
         {/* Navigation */}
-<div className="flex flex-col px-6 pb-4">
-  {errors.form && (
-    <p className="text-red-500 text-sm mb-2 text-center">{errors.form}</p>
-  )}
-  <div className="flex justify-between">
-    <button
-      type="button"
-      onClick={prevStep}
-      className="bg-gray-300 text-black font-semibold py-2 px-6 rounded-lg hover:bg-gray-400 transition-colors"
-    >
-      ← Back
-    </button>
-    <button
-      type="button"
-      onClick={validateAndProceed}
-      className="bg-yellow-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-yellow-600 transition-colors"
-    >
-      Next →
-    </button>
-  </div>
-</div>
-
+        <div className="flex flex-col px-6 pb-4">
+          {errors.form && (
+            <p className="text-red-500 text-sm mb-2 text-center">
+              {errors.form}
+            </p>
+          )}
+          <div className="flex justify-between">
+            <button
+              type="button"
+              onClick={prevStep}
+              className="bg-gray-300 text-black font-semibold py-2 px-6 rounded-lg hover:bg-gray-400 transition-colors"
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              onClick={validateAndProceed}
+              className="bg-yellow-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-yellow-600 transition-colors"
+            >
+              Next →
+            </button>
+          </div>
+        </div>
       </form>
     </div>
   );

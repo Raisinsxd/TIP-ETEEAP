@@ -1,11 +1,10 @@
-// B. Priorities ang goals
 "use client";
 
 import { Plus, Minus } from "lucide-react";
 
 export default function PrioritiesGoalsForm({
-  formData,
-  setFormData,
+  formData, // This prop IS the 'goals' object: { degrees: [...], statement: "..." }
+  setFormData, // This prop IS the 'handleGoalsChange' function
   nextStep,
   prevStep,
 }: {
@@ -14,50 +13,69 @@ export default function PrioritiesGoalsForm({
   nextStep: () => void;
   prevStep: () => void;
 }) {
+
+  // 🔽🔽🔽 --- SECTION 1: FIXED HANDLERS --- 🔽🔽🔽
+  // All handlers now correctly update the 'goals' object
+
   const handleDegreeChange = (index: number, value: string) => {
-    const updated = [...formData.goals.degrees];
+    // Ensure 'degrees' is an array before trying to spread it
+    const currentDegrees = Array.isArray(formData.degrees) ? formData.degrees : [];
+    const updated = [...currentDegrees];
     updated[index] = value;
-    setFormData((prev: any) => ({
-      ...prev,
-      goals: { ...prev.goals, degrees: updated },
-    }));
+    
+    // Pass the *entire* updated 'goals' object back to page.tsx
+    setFormData({ ...formData, degrees: updated });
   };
 
   const handleAddDegree = () => {
-    setFormData((prev: any) => ({
-      ...prev,
-      goals: { ...prev.goals, degrees: [...prev.goals.degrees, ""] },
-    }));
+    // Ensure 'degrees' is an array before spreading
+    const currentDegrees = Array.isArray(formData.degrees) ? formData.degrees : [];
+    
+    // Pass the new 'goals' object
+    setFormData({
+      ...formData,
+      degrees: [...currentDegrees, ""],
+    });
   };
 
   const handleRemoveDegree = (index: number) => {
-    const updated = formData.goals.degrees.filter((_: any, i: number) => i !== index);
-    setFormData((prev: any) => ({
-      ...prev,
-      goals: { ...prev.goals, degrees: updated },
-    }));
+    // Ensure 'degrees' is an array before filtering
+    const currentDegrees = Array.isArray(formData.degrees) ? formData.degrees : [];
+    const updated = currentDegrees.filter((_: any, i: number) => i !== index);
+    
+    // Pass the new 'goals' object
+    setFormData({
+      ...formData,
+      degrees: updated,
+    });
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({
-      ...prev,
-      goals: { ...prev.goals, [name]: value },
-    }));
+    // Pass the new 'goals' object
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    const { degrees, statement } = formData.goals;
+    
+    // Read directly from formData (which IS the goals object)
+    const { degrees, statement } = formData;
 
-    // Validation check
-    if (degrees.some((d: string) => !d) || !statement.trim()) {
+    // Safety check: ensure 'degrees' is an array and 'statement' exists
+    if (
+      !Array.isArray(degrees) ||
+      degrees.some((d: string) => !d) ||
+      !statement?.trim()
+    ) {
       alert("Please complete all required fields before proceeding.");
       return;
     }
 
     nextStep();
   };
+
+  // 🔼🔼🔼 --- END OF FIXED HANDLERS --- 🔼🔼🔼
 
   return (
     <form
@@ -74,7 +92,11 @@ export default function PrioritiesGoalsForm({
           <label className="block mb-2 text-sm font-semibold text-black">
             Degree program(s) being applied for:
           </label>
-          {formData.goals.degrees.map((degree: string, index: number) => (
+          
+          {/* 🔽🔽🔽 --- SECTION 2: FIXED JSX --- 🔽🔽🔽 */}
+
+          {/* Safety check: Only map if formData.degrees is an array */}
+          {Array.isArray(formData.degrees) && formData.degrees.map((degree: string, index: number) => (
             <div key={index} className="flex items-center gap-2 mb-3">
               <select
                 required
@@ -89,12 +111,13 @@ export default function PrioritiesGoalsForm({
                 <option value="BSCpE">Bachelor of Science in Computer Engineering</option>
                 <option value="BSIE">Bachelor of Science in Industrial Engineering</option>
                 <optgroup label="Bachelor of Science in Business Administration">
-                  <option value="Logistics and Supply Chain Management">
+                  {/* Fixed values to be consistent */}
+                  <option value="BSBA-LSCM">
                     Logistics and Supply Chain Management
                   </option>
-                  <option value="Financial Management">Financial Management</option>
-                  <option value="Human Resources Management">Human Resources Management</option>
-                  <option value="Marketing Management">Marketing Management</option>
+                  <option value="BSBA-FM">Financial Management</option>
+                  <option value="BSBA-HRM">Human Resources Management</option>
+                  <option value="BSBA-MM">Marketing Management</option>
                 </optgroup>
               </select>
 
@@ -128,13 +151,15 @@ export default function PrioritiesGoalsForm({
             name="statement"
             rows={4}
             required
-            value={formData.goals.statement}
+            // Read from formData.statement (this is correct)
+            value={formData.statement || ""}
             onChange={handleChange}
             className="w-full border border-gray-400 rounded-lg p-2 text-black"
             placeholder="Write your goals here..."
           />
         </div>
       </div>
+      {/* 🔼🔼🔼 --- END OF FIXED JSX --- 🔼🔼🔼 */}
 
       {/* Navigation buttons */}
       <div className="flex justify-between p-6">

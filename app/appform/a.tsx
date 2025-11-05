@@ -4,60 +4,67 @@ import { useState } from "react";
 import { Camera } from "lucide-react";
 
 export default function InitialForm({
-  formData,
-  setFormData,
+  formData, // This is NOW formData.initial, e.g., { name: "...", degree: "..." }
+  setFormData, // This is NOW handleInitialChange
   nextStep,
 }: {
   formData: any;
   setFormData: Function;
   nextStep: () => void;
 }) {
+  // 🔽🔽🔽 --- FIX #1: Read from formData.photo --- 🔽🔽🔽
   const [photoPreview, setPhotoPreview] = useState<string | null>(
-    formData.photoFile ? URL.createObjectURL(formData.photoFile) : null
+    formData.photo ? URL.createObjectURL(formData.photo) : null
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // 🔽🔽🔽 --- FIX #2: Update handleChange --- 🔽🔽🔽
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({
-      ...prev,
+    // Call setFormData (which is handleInitialChange) with the new object for the 'initial' slice
+    setFormData({
+      ...formData,
       [name]: value,
-    }));
+    });
     // Clear error on change
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  // 🔽🔽🔽 --- FIX #3: Update handlePhotoUpload --- 🔽🔽🔽
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) { // 2MB limit
         setErrors((prev) => ({
           ...prev,
-          photoFile: "Image size must be less than 2MB.",
+          photo: "Image size must be less than 2MB.", // Use 'photo'
         }));
         return;
       }
 
       setPhotoPreview(URL.createObjectURL(file));
-      setFormData((prev: any) => ({
-        ...prev,
-        photoFile: file,
-      }));
-      if (errors.photoFile) setErrors((prev) => ({ ...prev, photoFile: "" }));
+      // Update the 'initial' slice with the new file
+      setFormData({
+        ...formData,
+        photo: file, // Use 'photo'
+      });
+      if (errors.photo) setErrors((prev) => ({ ...prev, photo: "" }));
     }
   };
 
+  // 🔽🔽🔽 --- FIX #4: Update validateAndProceed --- 🔽🔽🔽
   const validateAndProceed = () => {
     const newErrors: Record<string, string> = {};
     
-    const { applicantName, degreeAppliedFor, campus, folderLink, photoFile } = formData;
+    // Destructure keys from formData (which is formData.initial)
+    const { name, degree, campus, folderLink, photo } = formData;
 
-    if (!applicantName?.trim()) newErrors.applicantName = "Name is required.";
-    if (!degreeAppliedFor) newErrors.degreeAppliedFor = "Degree is required.";
+    if (!name?.trim()) newErrors.name = "Name is required.";
+    if (!degree) newErrors.degree = "Degree is required.";
     if (!campus) newErrors.campus = "Campus is required.";
-    if (!photoFile) newErrors.photoFile = "Photo is required.";
+    if (!photo) newErrors.photo = "Photo is required."; // Use 'photo'
 
     if (!folderLink?.trim()) {
       newErrors.folderLink = "Folder link is required.";
@@ -85,6 +92,7 @@ export default function InitialForm({
         APPLICATION FORM AND PRELIMINARY ASSESSMENT FORM
       </h2>
 
+      {/* 🔽🔽🔽 --- FIX #5: Update JSX props (name, value, errors) --- 🔽🔽🔽 */}
       <div className="grid grid-cols-3 gap-4 items-start mb-4">
         <div className="col-span-2">
           {/* Name */}
@@ -94,15 +102,15 @@ export default function InitialForm({
             </label>
             <input
               type="text"
-              name="applicantName"
-              value={formData.applicantName || ""}
+              name="name" // Use 'name'
+              value={formData.name || ""} // Use 'name'
               onChange={handleChange}
               className={`w-full border rounded-lg px-3 py-2 text-black ${
-                errors.applicantName ? "border-red-500" : "border-gray-400"
+                errors.name ? "border-red-500" : "border-gray-400" // Use 'name'
               }`}
             />
-            {errors.applicantName && (
-              <p className="text-red-500 text-sm mt-1">{errors.applicantName}</p>
+            {errors.name && (
+              <p className="text-red-500 text-sm mt-1">{errors.name}</p> // Use 'name'
             )}
           </div>
 
@@ -113,11 +121,11 @@ export default function InitialForm({
                 Degree Applied For:
               </label>
               <select
-                name="degreeAppliedFor"
-                value={formData.degreeAppliedFor || ""}
+                name="degree" // Use 'degree'
+                value={formData.degree || ""} // Use 'degree'
                 onChange={handleChange}
                 className={`w-full border rounded-lg px-3 py-2 text-black ${
-                  errors.degreeAppliedFor ? "border-red-500" : "border-gray-400"
+                  errors.degree ? "border-red-500" : "border-gray-400" // Use 'degree'
                 }`}
               >
                 <option value="">Select degree</option>
@@ -139,8 +147,8 @@ export default function InitialForm({
                 {/* --- End of new options --- */}
 
               </select>
-              {errors.degreeAppliedFor && (
-                <p className="text-red-500 text-sm mt-1">{errors.degreeAppliedFor}</p>
+              {errors.degree && (
+                <p className="text-red-500 text-sm mt-1">{errors.degree}</p> // Use 'degree'
               )}
             </div>
           </div>
@@ -151,7 +159,7 @@ export default function InitialForm({
           <label
             htmlFor="photo-upload"
             className={`w-20 h-20 rounded-full bg-yellow-400 flex items-center justify-center cursor-pointer overflow-hidden ${
-              errors.photoFile ? "ring-2 ring-red-500" : ""
+              errors.photo ? "ring-2 ring-red-500" : "" // Use 'photo'
             }`}
           >
             {photoPreview ? (
@@ -172,8 +180,8 @@ export default function InitialForm({
             className="hidden"
           />
           <p className="text-sm mt-2 text-black">Add Photo</p>
-          {errors.photoFile && (
-            <p className="text-red-500 text-sm mt-1">{errors.photoFile}</p>
+          {errors.photo && (
+            <p className="text-red-500 text-sm mt-1">{errors.photo}</p> // Use 'photo'
           )}
         </div>
       </div>
@@ -184,11 +192,11 @@ export default function InitialForm({
           Campus:
         </label>
         <select
-          name="campus"
-          value={formData.campus || ""}
+          name="campus" // Use 'campus'
+          value={formData.campus || ""} // Use 'campus'
           onChange={handleChange}
           className={`w-full border rounded-lg px-3 py-2 text-black ${
-            errors.campus ? "border-red-500" : "border-gray-400"
+            errors.campus ? "border-red-500" : "border-gray-400" // Use 'campus'
           }`}
         >
           <option value="">Select campus</option>
@@ -196,7 +204,7 @@ export default function InitialForm({
           <option value="Manila">Manila</option>
         </select>
         {errors.campus && (
-          <p className="text-red-500 text-sm mt-1">{errors.campus}</p>
+          <p className="text-red-500 text-sm mt-1">{errors.campus}</p> // Use 'campus'
         )}
       </div>
 
@@ -207,15 +215,15 @@ export default function InitialForm({
         </label>
         <input
           type="url"
-          name="folderLink"
-          value={formData.folderLink || ""}
+          name="folderLink" // Use 'folderLink'
+          value={formData.folderLink || ""} // Use 'folderLink'
           onChange={handleChange}
           className={`w-full border rounded-lg px-3 py-2 text-black ${
-            errors.folderLink ? "border-red-500" : "border-gray-400"
+            errors.folderLink ? "border-red-500" : "border-gray-400" // Use 'folderLink'
           }`}
         />
         {errors.folderLink && (
-          <p className="text-red-500 text-sm mt-1">{errors.folderLink}</p>
+          <p className="text-red-500 text-sm mt-1">{errors.folderLink}</p> // Use 'folderLink'
         )}
       </div>
 
@@ -229,3 +237,4 @@ export default function InitialForm({
     </form>
   );
 }
+

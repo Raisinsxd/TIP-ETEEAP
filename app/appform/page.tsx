@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-// ✅ 1. Import Supabase client, NextAuth session hook, and Loader icon
 import { createClient } from "@supabase/supabase-js";
 import { useSession } from "next-auth/react";
 import { PenTool, Loader2 } from "lucide-react";
@@ -137,10 +136,21 @@ export default function ApplicationFormPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const signaturePadRef = useRef<SignatureCanvas>(null);
 
+    // [Inside ApplicationFormPage component]
+
+    // [Inside ApplicationFormPage component]
     const [formData, setFormData] = useState({
         initial: { name: "", degree: "", campus: "", date: getTodayDateISO(), folderLink: "", photo: null as File | null },
         personalInfo: { fullAddress: "", mobile: "", email: "" },
         goals: { degrees: [""], statement: "" },
+        education: { tertiary: [], secondary: [], elementary: [], technical: [] },
+        nonFormal: [] as any[], 
+        certifications: [] as any[],
+        publications: [] as any[],
+        inventions: [] as any[],
+        work: { employment: [], consultancy: [], selfEmployment: [] },
+        recognitions: [] as any[],
+        professional_development: { memberships: [], projects: [], research: [] },
         creativeWorks: [{ title: "", institution: "", dates: "" }],
         lifelongLearning: { hobbies: "", skills: "", workActivities: "", volunteer: "", travels: "" },
         selfAssessment: { jobLearning: "", teamworkLearning: "", selfLearning: "", workBenefits: "", essay: "" }
@@ -167,8 +177,60 @@ export default function ApplicationFormPage() {
 
             if (savedData) {
                 const parsedData = JSON.parse(savedData);
-                parsedData.initial.photo = formData.initial.photo;
-                setFormData(parsedData);
+                
+                // ✅ FIX: Robustly merge the loaded data
+                setFormData(prev => {
+                    // Start with a clean copy of the default state
+                    const newState = JSON.parse(JSON.stringify(prev));
+
+                    // Safely merge each top-level key
+                    (Object.keys(prev) as Array<keyof typeof prev>).forEach(key => {
+                        if (parsedData[key] !== undefined) {
+                            if (typeof newState[key] === 'object' && !Array.isArray(newState[key]) && newState[key] !== null) {
+                                // It's an object (like initial, personalInfo, goals)
+                                // Merge it, but don't allow null to overwrite the object
+                                newState[key] = { ...prev[key], ...(parsedData[key] || {}) };
+                            } else {
+                                // It's a primitive, array, or null
+                                // Allow parsedData to overwrite
+                                newState[key] = parsedData[key];
+                            }
+                        }
+                    });
+
+                    // --- Post-Merge Sanity Checks (The real fix) ---
+                    // This ensures the nested objects have the correct structure
+                    // no matter what localStorage had.
+
+                    // 1. Ensure 'initial' is correct
+                    newState.initial = { ...prev.initial, ...(newState.initial || {}) };
+                    newState.initial.photo = prev.initial.photo; // Always reset file
+
+                    // 2. Ensure 'goals' is correct and 'degrees' is an array
+                    newState.goals = { ...prev.goals, ...(newState.goals || {}) };
+                    if (!Array.isArray(newState.goals.degrees)) {
+                        newState.goals.degrees = [""]; // Force it to be an array
+                    }
+
+                    // 3. Ensure 'personalInfo' is correct
+                    newState.personalInfo = { ...prev.personalInfo, ...(newState.personalInfo || {}) };
+                    
+                    // 4. Ensure other nested objects are correct
+                    newState.education = { ...prev.education, ...(newState.education || {}) };
+                    newState.work = { ...prev.work, ...(newState.work || {}) };
+                    newState.lifelongLearning = { ...prev.lifelongLearning, ...(newState.lifelongLearning || {}) };
+                    newState.selfAssessment = { ...prev.selfAssessment, ...(newState.selfAssessment || {}) };
+
+                    // 5. Ensure array keys are arrays
+                    if (!Array.isArray(newState.nonFormal)) newState.nonFormal = [];
+                    if (!Array.isArray(newState.certifications)) newState.certifications = [];
+                    if (!Array.isArray(newState.publications)) newState.publications = [];
+                    if (!Array.isArray(newState.inventions)) newState.inventions = [];
+                    if (!Array.isArray(newState.recognitions)) newState.recognitions = [];
+                    if (!Array.isArray(newState.creativeWorks)) newState.creativeWorks = [{ title: "", institution: "", dates: "" }];
+
+                    return newState;
+                });
             }
             if (savedStep) {
                 const step = parseInt(savedStep, 10);
@@ -178,6 +240,7 @@ export default function ApplicationFormPage() {
             }
         } catch (error) {
             console.error("Failed to load form data from local storage", error);
+            // If loading fails, clear the bad data
             localStorage.removeItem('applicationFormData');
             localStorage.removeItem('applicationFormStep');
         }
@@ -187,7 +250,9 @@ export default function ApplicationFormPage() {
     useEffect(() => {
         if (currentStep < totalSteps + 2) {
             const dataToSave = JSON.parse(JSON.stringify(formData));
-            if (dataToSave.initial.photo) {
+            
+            // ✅ FIX: Check if dataToSave.initial exists first
+            if (dataToSave.initial && dataToSave.initial.photo) {
                 delete dataToSave.initial.photo;
             }
             localStorage.setItem('applicationFormData', JSON.stringify(dataToSave));
@@ -197,6 +262,33 @@ export default function ApplicationFormPage() {
 
     const nextStep = () => setCurrentStep((prev) => prev + 1);
     const prevStep = () => setCurrentStep((prev) => prev - 1);
+
+    // Helper to update a specific slice of state
+    const createFormUpdater = (key: keyof typeof formData) => {
+        return (data: any) => {
+            setFormData((prev) => ({
+                ...prev,
+                [key]: data,
+            }));
+        };
+    };
+
+    // Create a specific handler for each step
+    const handleInitialChange = createFormUpdater('initial');
+    const handlePersonalChange = createFormUpdater('personalInfo');
+    const handleGoalsChange = createFormUpdater('goals');
+    
+    // This one handler will update all keys from d.tsx
+    const handleBackgroundChange = (updatedData: any) => {
+      setFormData(prev => ({
+        ...prev,
+        ...updatedData // Assumes d.tsx passes back { education: ..., work: ..., etc. }
+      }));
+    };
+
+    const handleCreativeWorksChange = createFormUpdater('creativeWorks');
+    const handleLearningChange = createFormUpdater('lifelongLearning');
+    const handleSelfAssessmentChange = createFormUpdater('selfAssessment');
 
     // ✅ The handleSubmit function WITH the UUID lookup and console.log
     const handleSubmit = async () => {
@@ -299,6 +391,16 @@ export default function ApplicationFormPage() {
                 self_assessment: formData.selfAssessment,
                 photo_url: photoUrlData.publicUrl,
                 signature_url: sigUrlData.publicUrl,
+                // --- 👇 ADDED KEYS FROM d.tsx ---
+                education_background: formData.education,
+                non_formal_education: formData.nonFormal,
+                certifications: formData.certifications,
+                publications: formData.publications,
+                inventions: formData.inventions,
+                work_experiences: formData.work,
+                recognitions: formData.recognitions,
+                // ---------------------------------
+                professional_development: formData.professional_development,
             };
             console.log("Insert Payload:", insertPayload); // Log the data being sent
 
@@ -343,8 +445,8 @@ export default function ApplicationFormPage() {
   case 1:
     return (
       <InitialForm
-        formData={formData}
-        setFormData={setFormData}
+        formData={formData.initial} // Pass the 'initial' slice
+        setFormData={handleInitialChange} // Pass the 'initial' handler
         nextStep={nextStep}
       />
     );
@@ -352,8 +454,8 @@ export default function ApplicationFormPage() {
   case 2:
     return (
       <PersonalInformationForm
-        formData={formData}
-        setFormData={setFormData}
+        formData={formData.personalInfo} // Pass the 'personalInfo' slice
+        setFormData={handlePersonalChange} // Pass the 'personalInfo' handler
         nextStep={nextStep}
         prevStep={prevStep}
       />
@@ -362,18 +464,19 @@ export default function ApplicationFormPage() {
   case 3:
     return (
       <PrioritiesGoalsForm
-        formData={formData}
-        setFormData={setFormData}
+        formData={formData.goals} // Pass the 'goals' slice
+        setFormData={handleGoalsChange} // Pass the 'goals' handler
         nextStep={nextStep}
         prevStep={prevStep}
       />
     );
 
   case 4:
+    // d.tsx is complex. We pass the relevant slices and the main setter
     return (
       <BackgroundAchievementsForm
-        formData={formData}
-        setFormData={setFormData}
+        formData={formData} // Pass the whole object so it can read all its keys
+        setFormData={setFormData} // Pass the main setter
         nextStep={nextStep}
         prevStep={prevStep}
       />
@@ -382,8 +485,8 @@ export default function ApplicationFormPage() {
   case 5:
     return (
       <CreativeWorksForm
-        formData={formData}
-        setFormData={setFormData}
+        formData={formData.creativeWorks} // Pass the 'creativeWorks' slice
+        setFormData={handleCreativeWorksChange} // Pass the 'creativeWorks' handler
         nextStep={nextStep}
         prevStep={prevStep}
       />
@@ -392,8 +495,8 @@ export default function ApplicationFormPage() {
   case 6:
     return (
       <LifelongLearningForm
-        formData={formData}
-        setFormData={setFormData}
+        formData={formData.lifelongLearning} // Pass the 'lifelongLearning' slice
+        setFormData={handleLearningChange} // Pass the 'lifelongLearning' handler
         nextStep={nextStep}
         prevStep={prevStep}
       />
@@ -402,14 +505,15 @@ export default function ApplicationFormPage() {
   case 7:
     return (
       <SelfReportForm
-        formData={formData}
-        setFormData={setFormData}
+        formData={formData.selfAssessment} // Pass the 'selfAssessment' slice
+        setFormData={handleSelfAssessmentChange} // Pass the 'selfAssessment' handler
         nextStep={nextStep}
         prevStep={prevStep}
       />
     );
 
   case 8:
+    // ... (This case is correct)
     return (
       <FinalReviewStep
         nextStep={handleSubmit}

@@ -6,24 +6,36 @@ export default function SelfReportForm({
   nextStep,
   prevStep,
 }: {
-  formData: any;
-  setFormData: Function;
+  formData: any; // This prop is *actually* the selfAssessment object
+  setFormData: (data: any) => void; // This prop is handleSelfAssessmentChange
   nextStep: () => void;
   prevStep: () => void;
 }) {
+  // ✅ FIX: The 'setFormData' prop is handleSelfAssessmentChange,
+  // which expects the new selfAssessment object.
+  // 'formData' *is* the selfAssessment object.
   const handleChange = (
     e: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev: any) => ({
-      ...prev,
-      selfAssessment: { ...prev.selfAssessment, [name]: value },
-    }));
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
   };
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     nextStep();
+  };
+
+  // ✅ FIX: Add a default object to prevent errors if formData is undefined on load
+  const data = formData || {
+    jobLearning: "",
+    teamworkLearning: "",
+    selfLearning: "",
+    workBenefits: "",
+    essay: "",
   };
 
   return (
@@ -54,7 +66,8 @@ export default function SelfReportForm({
               name="jobLearning"
               rows={3}
               required
-              value={formData.selfAssessment.jobLearning}
+              // ✅ FIX: Read from data.jobLearning
+              value={data.jobLearning}
               onChange={handleChange}
               className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
             />
@@ -69,7 +82,8 @@ export default function SelfReportForm({
               name="teamworkLearning"
               rows={3}
               required
-              value={formData.selfAssessment.teamworkLearning}
+              // ✅ FIX: Read from data.teamworkLearning
+              value={data.teamworkLearning}
               onChange={handleChange}
               className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
             />
@@ -84,7 +98,8 @@ export default function SelfReportForm({
               name="selfLearning"
               rows={3}
               required
-              value={formData.selfAssessment.selfLearning}
+              // ✅ FIX: Read from data.selfLearning
+              value={data.selfLearning}
               onChange={handleChange}
               className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
             />
@@ -99,7 +114,8 @@ export default function SelfReportForm({
               name="workBenefits"
               rows={3}
               required
-              value={formData.selfAssessment.workBenefits}
+              // ✅ FIX: Read from data.workBenefits
+              value={data.workBenefits}
               onChange={handleChange}
               className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black"
             />
@@ -114,7 +130,8 @@ export default function SelfReportForm({
             name="essay"
             rows={6}
             required
-            value={formData.selfAssessment.essay}
+            // ✅ FIX: Read from data.essay
+            value={data.essay}
             onChange={handleChange}
             className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black mb-6"
           />
