@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, ComponentType, useMemo, useRef } from "react"; // 1. Added useRef
+import { useEffect, useState, ComponentType, useMemo, useRef } from "react";
 import supabase from "../../../lib/supabase/client";
 import { useRouter } from "next/navigation";
 // Import child components
@@ -11,27 +11,32 @@ import UserLoginsManage from "./userlogins";
 import ForcePasswordChange from "./ForcePasswordChange";
 import DashboardHome from "./DashboardHome";
 import EmailManagement from "./emailmanagement";
+// ✅ 1. Import your new component
+import PortfolioSubmissions from "./portfoliosubmissions";
 
-// Define a type for your GoogleUser (if needed by UserLoginsManage)
+// Define a type for your GoogleUser
 export interface GoogleUser {
   id: string;
   email?: string;
 }
 
+// ✅ 2. Add the new tab name to the type
 type TabName =
   | "Home"
-  | "AdminLogins"
   | "Applicants"
+  | "PortfolioSubmissions" // <-- ADDED
   | "UserLogins"
+  | "AdminLogins"
   | "AdminManagement"
   | "EmailManagement";
 
-// Map tab keys to components and titles
+// ✅ 3. Add the new tab to the 'tabs' object
 const tabs: { [key in TabName]: { title: string; component: ComponentType<any> | null } } = {
   Home: { title: "Dashboard", component: DashboardHome },
-  AdminLogins: { title: "Admin Login History", component: UserManage },
   Applicants: { title: "Applicant Submissions", component: ApplicantsManage },
+  PortfolioSubmissions: { title: "Portfolio Submissions", component: PortfolioSubmissions }, // <-- ADDED
   UserLogins: { title: "User Login History", component: UserLoginsManage },
+  AdminLogins: { title: "Admin Login History", component: UserManage },
   AdminManagement: { title: "Admin Management", component: AdminManagement },
   EmailManagement: { title: "Email Management", component: EmailManagement }, 
 };
@@ -51,7 +56,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabName>("Home");
   
-  // 2. Add a ref to store the inactivity timer
   const inactivityTimer = useRef<NodeJS.Timeout | null>(null);
 
   // Function to fetch the currently logged-in admin's profile
@@ -111,7 +115,6 @@ export default function DashboardPage() {
 
   // Function to handle user logout
   async function handleLogout() {
-    // 3. ADDED: Logout Confirmation
     const isConfirmed = window.confirm("Are you sure you want to log out?");
     if (!isConfirmed) {
       return; // Stop logout if user clicks "Cancel"
@@ -131,12 +134,11 @@ export default function DashboardPage() {
     }
   }
   
-  // 4. ADDED: Inactivity Logout Effect
+  // Inactivity Logout Effect
   useEffect(() => {
     const twentyMinutes = 20 * 60 * 1000;
 
     const logoutInactiveUser = () => {
-      // Only log out if there is a user to log out
       if (currentUser) {
         console.log("[DashboardPage] Inactivity timer elapsed. Logging out...");
         alert("You have been logged out due to 20 minutes of inactivity.");
@@ -145,26 +147,18 @@ export default function DashboardPage() {
     };
 
     const resetTimer = () => {
-      // Clear the existing timer
       if (inactivityTimer.current) {
         clearTimeout(inactivityTimer.current);
       }
-      // Set a new timer
       inactivityTimer.current = setTimeout(logoutInactiveUser, twentyMinutes);
     };
 
-    // Events that count as "activity"
     const events = ["mousemove", "keydown", "click", "scroll"];
-
-    // Set the initial timer
     resetTimer();
-
-    // Add event listeners
     events.forEach((event) => {
       window.addEventListener(event, resetTimer);
     });
 
-    // Cleanup function: This runs when the component unmounts
     return () => {
       console.log("[DashboardPage] Clearing inactivity listeners and timer.");
       if (inactivityTimer.current) {
@@ -174,8 +168,7 @@ export default function DashboardPage() {
         window.removeEventListener(event, resetTimer);
       });
     };
-    // Re-run this effect if the currentUser changes (i.e., on login/logout)
-  }, [currentUser, router]); // Added router to dependency array for handleLogout
+  }, [currentUser, router]); // Dependency array is correct
 
 
   // Effect to fetch user profile on initial mount and set up auth listener
@@ -196,20 +189,20 @@ export default function DashboardPage() {
       console.log("[DashboardPage] Unmounting, unsubscribing from auth listener.");
       authListener?.subscription.unsubscribe();
     };
-    // 5. REMOVED: Unnecessary eslint-disable-next-line
-  }, [router]); // Include router in dependency array
+  }, [router]);
 
   // Determine the component and title for the currently active tab
   const ActiveComponent = tabs[activeTab]?.component;
   const pageTitle = tabs[activeTab]?.title ?? "Dashboard";
 
-  // Prepare props to pass down to child components
+  // ✅ 4. Add an entry for your new component's props (if any)
   const componentProps: { [key: string]: any } = useMemo(
     () => ({
       AdminManagement: { currentUser: currentUser },
       EmailManagement: {},
+      PortfolioSubmissions: {}, // <-- ADDED
     }),
-    [currentUser] // Simplified dependency array
+    [currentUser]
   );
 
   // --- Render Logic ---
