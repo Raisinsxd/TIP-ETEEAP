@@ -53,8 +53,8 @@ export const EmailTemplate = ({ subject, body }: EmailTemplateProps) => (
                 <Img
                   // --- USE THE FULL URL ---
                   src={fbUrl}
-                  width="32"
-                  height="32"
+                  width="36"
+                  height="36"
                   alt="Facebook"
                 />
               </Link>
