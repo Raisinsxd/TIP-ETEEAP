@@ -19,7 +19,7 @@ const baseUrl = process.env.VERCEL_URL
 
 const logoUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/TIPLogo.png`;
 const fbUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/FB.png`;
-const xUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/X.png`;
+const xUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/x.png`;
 const igUrl = `https://zwqrpmnpboyvvniboqrh.supabase.co/storage/v1/object/public/Assets/images/IG.png`;
 
 interface EmailTemplateProps {
@@ -37,7 +37,7 @@ export const EmailTemplate = ({ subject, body }: EmailTemplateProps) => (
           <Img
             // --- USE THE FULL URL ---
             src={logoUrl}
-            width="150"
+            width="50"
             height="50"
             alt="TIP Logo"
           />
