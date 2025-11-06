@@ -12,6 +12,8 @@ import BackgroundAchievementsForm from "./d"; //missing page
 import CreativeWorksForm from "./i";
 import LifelongLearningForm from "./j";
 import SelfReportForm from "./selfassessment";
+import { useRouter } from 'next/navigation'; // For the "Disagree" button
+import DataPrivacyConsent from './undertaking'; // Import the new component
 
 // ✅ 2. Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -53,6 +55,7 @@ function Pagination({ currentStep, totalSteps, stepTitles }: { currentStep: numb
 
 // --- Success Screen Component ---
 function SuccessScreen() {
+    // ... (Component code is unchanged)
     return (
         <div className="bg-white shadow-lg rounded-2xl w-full max-w-3xl p-12 text-center">
             <div className="text-6xl mb-4">🎉</div>
@@ -64,6 +67,7 @@ function SuccessScreen() {
 
 // --- Final Review Step Component ---
 function FinalReviewStep({ nextStep, prevStep, signaturePadRef, isSubmitting }: {
+    // ... (Component code is unchanged)
     nextStep: () => void,
     prevStep: () => void,
     signaturePadRef: React.RefObject<SignatureCanvas | null>,
@@ -136,7 +140,11 @@ export default function ApplicationFormPage() {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const signaturePadRef = useRef<SignatureCanvas>(null);
 
-    // [Inside ApplicationFormPage component]
+    // --- ✅ 1. HOOKS MOVED INSIDE & STATE CHANGED ---
+    const [hasConsented, setHasConsented] = useState(false); // Default to false
+    // We no longer need isLoadingConsent
+    const router = useRouter();
+    // ---
 
     // [Inside ApplicationFormPage component]
     const [formData, setFormData] = useState({
@@ -144,7 +152,7 @@ export default function ApplicationFormPage() {
         personalInfo: { fullAddress: "", mobile: "", email: "" },
         goals: { degrees: [""], statement: "" },
         education: { tertiary: [], secondary: [], elementary: [], technical: [] },
-        nonFormal: [] as any[], 
+        nonFormal: [] as any[],
         certifications: [] as any[],
         publications: [] as any[],
         inventions: [] as any[],
@@ -157,15 +165,15 @@ export default function ApplicationFormPage() {
     });
 
     const stepTitles = [
-  "Initial Info",
-  "Personal",
-  "Goals",
-  "Background & Achievements", // d.tsx
-  "Creative Works",
-  "Learning",
-  "Self Assessment",
-  "Submit",
-];
+        "Initial Info",
+        "Personal",
+        "Goals",
+        "Background & Achievements", // d.tsx
+        "Creative Works",
+        "Learning",
+        "Self Assessment",
+        "Submit",
+    ];
 
     const totalSteps = stepTitles.length;
 
@@ -177,7 +185,7 @@ export default function ApplicationFormPage() {
 
             if (savedData) {
                 const parsedData = JSON.parse(savedData);
-                
+
                 // ✅ FIX: Robustly merge the loaded data
                 setFormData(prev => {
                     // Start with a clean copy of the default state
@@ -214,7 +222,7 @@ export default function ApplicationFormPage() {
 
                     // 3. Ensure 'personalInfo' is correct
                     newState.personalInfo = { ...prev.personalInfo, ...(newState.personalInfo || {}) };
-                    
+
                     // 4. Ensure other nested objects are correct
                     newState.education = { ...prev.education, ...(newState.education || {}) };
                     newState.work = { ...prev.work, ...(newState.work || {}) };
@@ -246,11 +254,15 @@ export default function ApplicationFormPage() {
         }
     }, []); // Run only once on mount
 
+    // --- ✅ 2. REMOVED USEEFFECT THAT CHECKED CONSENT ---
+    // (That useEffect is no longer here)
+
     // Save data to localStorage when it changes
     useEffect(() => {
-        if (currentStep < totalSteps + 2) {
+        // Only save data if user has consented
+        if (hasConsented && currentStep < totalSteps + 2) {
             const dataToSave = JSON.parse(JSON.stringify(formData));
-            
+
             // ✅ FIX: Check if dataToSave.initial exists first
             if (dataToSave.initial && dataToSave.initial.photo) {
                 delete dataToSave.initial.photo;
@@ -258,7 +270,7 @@ export default function ApplicationFormPage() {
             localStorage.setItem('applicationFormData', JSON.stringify(dataToSave));
             localStorage.setItem('applicationFormStep', currentStep.toString());
         }
-    }, [formData, currentStep]);
+    }, [formData, currentStep, hasConsented]); // Added hasConsented dependency
 
     const nextStep = () => setCurrentStep((prev) => prev + 1);
     const prevStep = () => setCurrentStep((prev) => prev - 1);
@@ -277,18 +289,30 @@ export default function ApplicationFormPage() {
     const handleInitialChange = createFormUpdater('initial');
     const handlePersonalChange = createFormUpdater('personalInfo');
     const handleGoalsChange = createFormUpdater('goals');
-    
+
     // This one handler will update all keys from d.tsx
     const handleBackgroundChange = (updatedData: any) => {
-      setFormData(prev => ({
-        ...prev,
-        ...updatedData // Assumes d.tsx passes back { education: ..., work: ..., etc. }
-      }));
+        setFormData(prev => ({
+            ...prev,
+            ...updatedData // Assumes d.tsx passes back { education: ..., work: ..., etc. }
+        }));
     };
 
     const handleCreativeWorksChange = createFormUpdater('creativeWorks');
     const handleLearningChange = createFormUpdater('lifelongLearning');
     const handleSelfAssessmentChange = createFormUpdater('selfAssessment');
+
+    // --- ✅ 3. MODIFIED CONSENT HANDLER FUNCTIONS ---
+    const handleConsentAgree = () => {
+        // We no longer save to localStorage. Just set the state.
+        setHasConsented(true);
+    };
+
+    const handleConsentDisagree = () => {
+        // Send the user back to the dashboard or home page
+        router.push('/'); // <-- You can change this path
+    };
+    // ---
 
     // ✅ The handleSubmit function WITH the UUID lookup and console.log
     const handleSubmit = async () => {
@@ -321,7 +345,7 @@ export default function ApplicationFormPage() {
             // --- 2. Look up the Supabase UUID using the email ---
             // ⚠️ Make sure 'users' is the correct table name and 'id' is the column with the Supabase UUID
             console.log(`Looking up user with email: ${session.user.email}`);
-            
+
 
 
             const { data: userData, error: userError } = await supabase
@@ -417,6 +441,7 @@ export default function ApplicationFormPage() {
             // --- 6. Success ---
             localStorage.removeItem('applicationFormData');
             localStorage.removeItem('applicationFormStep');
+            // ✅ REMOVED the line that cleared consent
             nextStep(); // Move to success screen
 
         } catch (error) {
@@ -442,100 +467,116 @@ export default function ApplicationFormPage() {
         }
 
         switch (currentStep) {
-  case 1:
-    return (
-      <InitialForm
-        formData={formData.initial} // Pass the 'initial' slice
-        setFormData={handleInitialChange} // Pass the 'initial' handler
-        nextStep={nextStep}
-      />
-    );
+            case 1:
+                return (
+                    <InitialForm
+                        formData={formData.initial} // Pass the 'initial' slice
+                        setFormData={handleInitialChange} // Pass the 'initial' handler
+                        nextStep={nextStep}
+                    />
+                );
 
-  case 2:
-    return (
-      <PersonalInformationForm
-        formData={formData.personalInfo} // Pass the 'personalInfo' slice
-        setFormData={handlePersonalChange} // Pass the 'personalInfo' handler
-        nextStep={nextStep}
-        prevStep={prevStep}
-      />
-    );
+            case 2:
+                return (
+                    <PersonalInformationForm
+                        formData={formData.personalInfo} // Pass the 'personalInfo' slice
+                        setFormData={handlePersonalChange} // Pass the 'personalInfo' handler
+                        nextStep={nextStep}
+                        prevStep={prevStep}
+                    />
+                );
 
-  case 3:
-    return (
-      <PrioritiesGoalsForm
-        formData={formData.goals} // Pass the 'goals' slice
-        setFormData={handleGoalsChange} // Pass the 'goals' handler
-        nextStep={nextStep}
-        prevStep={prevStep}
-      />
-    );
+            case 3:
+                return (
+                    <PrioritiesGoalsForm
+                        formData={formData.goals} // Pass the 'goals' slice
+                        setFormData={handleGoalsChange} // Pass the 'goals' handler
+                        nextStep={nextStep}
+                        prevStep={prevStep}
+                    />
+                );
 
-  case 4:
-    // d.tsx is complex. We pass the relevant slices and the main setter
-    return (
-      <BackgroundAchievementsForm
-        formData={formData} // Pass the whole object so it can read all its keys
-        setFormData={setFormData} // Pass the main setter
-        nextStep={nextStep}
-        prevStep={prevStep}
-      />
-    );
+            case 4:
+                // d.tsx is complex. We pass the relevant slices and the main setter
+                return (
+                    <BackgroundAchievementsForm
+                        formData={formData} // Pass the whole object so it can read all its keys
+                        setFormData={setFormData} // Pass the main setter
+                        nextStep={nextStep}
+                        prevStep={prevStep}
+                    />
+                );
 
-  case 5:
-    return (
-      <CreativeWorksForm
-        formData={formData.creativeWorks} // Pass the 'creativeWorks' slice
-        setFormData={handleCreativeWorksChange} // Pass the 'creativeWorks' handler
-        nextStep={nextStep}
-        prevStep={prevStep}
-      />
-    );
+            case 5:
+                return (
+                    <CreativeWorksForm
+                        formData={formData.creativeWorks} // Pass the 'creativeWorks' slice
+                        setFormData={handleCreativeWorksChange} // Pass the 'creativeWorks' handler
+                        nextStep={nextStep}
+                        prevStep={prevStep}
+                    />
+                );
 
-  case 6:
-    return (
-      <LifelongLearningForm
-        formData={formData.lifelongLearning} // Pass the 'lifelongLearning' slice
-        setFormData={handleLearningChange} // Pass the 'lifelongLearning' handler
-        nextStep={nextStep}
-        prevStep={prevStep}
-      />
-    );
+            case 6:
+                return (
+                    <LifelongLearningForm
+                        formData={formData.lifelongLearning} // Pass the 'lifelongLearning' slice
+                        setFormData={handleLearningChange} // Pass the 'lifelongLearning' handler
+                        nextStep={nextStep}
+                        prevStep={prevStep}
+                    />
+                );
 
-  case 7:
-    return (
-      <SelfReportForm
-        formData={formData.selfAssessment} // Pass the 'selfAssessment' slice
-        setFormData={handleSelfAssessmentChange} // Pass the 'selfAssessment' handler
-        nextStep={nextStep}
-        prevStep={prevStep}
-      />
-    );
+            case 7:
+                return (
+                    <SelfReportForm
+                        formData={formData.selfAssessment} // Pass the 'selfAssessment' slice
+                        setFormData={handleSelfAssessmentChange} // Pass the 'selfAssessment' handler
+                        nextStep={nextStep}
+                        prevStep={prevStep}
+                    />
+                );
 
-  case 8:
-    // ... (This case is correct)
-    return (
-      <FinalReviewStep
-        nextStep={handleSubmit}
-        prevStep={prevStep}
-        signaturePadRef={signaturePadRef}
-        isSubmitting={isSubmitting}
-      />
-    );
+            case 8:
+                // ... (This case is correct)
+                return (
+                    <FinalReviewStep
+                        nextStep={handleSubmit}
+                        prevStep={prevStep}
+                        signaturePadRef={signaturePadRef}
+                        isSubmitting={isSubmitting}
+                    />
+                );
 
-  case 9:
-    return <SuccessScreen />;
+            case 9:
+                return <SuccessScreen />;
 
-  default:
-    return <div>Form complete or invalid step.</div>;
-}
+            default:
+                return <div>Form complete or invalid step.</div>;
+        }
 
     };
 
+    // --- ✅ 4. UPDATED FINAL RETURN ---
     return (
         <div className="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-6 font-sans">
-            <Pagination currentStep={currentStep} totalSteps={totalSteps} stepTitles={stepTitles} />
-            {renderStep()}
+            
+            {/* We no longer need the 'isLoadingConsent' check */}
+
+            {hasConsented ? (
+                // --- If they HAVE consented, show the form ---
+                <>
+                    <Pagination currentStep={currentStep} totalSteps={totalSteps} stepTitles={stepTitles} />
+                    {renderStep()}
+                </>
+            ) : (
+                // --- If they have NOT consented, show the modal ---
+                <DataPrivacyConsent
+                    onAgree={handleConsentAgree}
+                    onDisagree={handleConsentDisagree}
+                />
+            )}
+            
         </div>
     );
 }
