@@ -111,7 +111,7 @@ export default function Page() {
                 <h2 className="text-2xl font-bold mb-4">Login to Continue</h2>
                 <p className="text-gray-400 mb-6">Please sign in to access the forms and begin your application.</p>
                 <button onClick={() => signIn("google")} className="w-full flex items-center justify-center gap-3 bg-white text-black font-semibold py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors">
-                  <img src="/assets/google-logo.svg" alt="Google" className="w-6 h-6" /> Sign in with Google
+                  <img src="/assets/googleicon.png" alt="Google" className="w-6 h-6" /> Sign in with Google
                 </button>
               </div>
             </div>
