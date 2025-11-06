@@ -149,7 +149,7 @@ export default function ApplicationFormPage() {
     // [Inside ApplicationFormPage component]
     const [formData, setFormData] = useState({
         initial: { name: "", degree: "", campus: "", date: getTodayDateISO(), folderLink: "", photo: null as File | null },
-        personalInfo: { fullAddress: "", mobile: "", email: "" },
+        personalInfo: { fullAddress: "", mobile: "", email: "", birthDate: "", age: null as number | null },
         goals: { degrees: [""], statement: "" },
         education: { tertiary: [], secondary: [], elementary: [], technical: [] },
         nonFormal: [] as any[],
@@ -408,6 +408,8 @@ export default function ApplicationFormPage() {
                 full_address: formData.personalInfo.fullAddress,
                 mobile_number: formData.personalInfo.mobile,
                 email_address: formData.personalInfo.email,
+                age: formData.personalInfo.age,
+                birth_date: formData.personalInfo.birthDate,
                 goal_statement: formData.goals.statement,
                 degree_priorities: formData.goals.degrees,
                 creative_works: formData.creativeWorks,

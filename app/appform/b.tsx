@@ -3,8 +3,8 @@
 import { useState } from "react";
 
 export default function PersonalInformationForm({
-  formData, // This is NOW formData.personalInfo, e.g., { fullAddress: ..., mobile: ..., email: ... }
-  setFormData, // This is NOW handlePersonalChange
+  formData, // This is formData.personalInfo, e.g., { fullAddress: ..., mobile: ..., email: ... }
+  setFormData, // This is handlePersonalChange
   nextStep,
   prevStep,
 }: {
@@ -15,8 +15,7 @@ export default function PersonalInformationForm({
 }) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // 🔽🔽🔽 --- FIX #1: Correct handleChange --- 🔽🔽🔽
-  // We must pass the NEW 'personalInfo' object to setFormData, not a function
+  // --- This function is for most text inputs ---
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
@@ -26,12 +25,41 @@ export default function PersonalInformationForm({
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // 🔽🔽🔽 --- FIX #2: Correct validateAndProceed --- 🔽🔽🔽
+  // --- NEW: This function calculates age from a date string ---
+  const calculateAge = (dateString: string): number => {
+    if (!dateString) return 0;
+    const today = new Date();
+    const birthDate = new Date(dateString);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDifference = today.getMonth() - birthDate.getMonth();
+    
+    // Check if the birthday has occurred this year
+    if (monthDifference < 0 || (monthDifference === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  // --- NEW: Special handler for the date picker ---
+  // It updates both the birthDate and the calculated age
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target; // name will be "birthDate"
+    const calculatedAge = calculateAge(value);
+
+    setFormData({
+      ...formData,
+      [name]: value, // Update birthDate
+      age: calculatedAge, // Update age
+    });
+
+    if (errors.birthDate) setErrors((prev) => ({ ...prev, [name]: "" }));
+  };
+
   const validateAndProceed = () => {
     const newErrors: Record<string, string> = {};
     
-    // Read 'mobile' and 'email' (must match the state in page.tsx)
-    const { fullAddress, mobile, email } = formData;
+    // Read all fields from the 'personalInfo' object
+    const { fullAddress, mobile, email, birthDate } = formData;
 
     if (!fullAddress?.trim()) newErrors.fullAddress = "Full address is required.";
 
@@ -47,11 +75,25 @@ export default function PersonalInformationForm({
       newErrors.email = "Please enter a valid email address.";
     }
 
+    // --- NEW: Validation for birthDate ---
+    if (!birthDate?.trim()) {
+      newErrors.birthDate = "Date of birth is required.";
+    }
+
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length === 0) {
       nextStep();
     }
+  };
+
+  // --- This default object ensures formData.age exists on first render ---
+  const data = formData || { 
+    fullAddress: "", 
+    mobile: "", 
+    email: "", 
+    birthDate: "", 
+    age: "" 
   };
 
   return (
@@ -64,7 +106,6 @@ export default function PersonalInformationForm({
           A. Personal Information
         </h3>
 
-        {/* 🔽🔽🔽 --- FIX #3: Correct JSX name, value, and error props --- 🔽🔽🔽 */}
         <div className="grid grid-cols-2 gap-4">
           {/* Full Address */}
           <div className="col-span-2">
@@ -73,7 +114,7 @@ export default function PersonalInformationForm({
             </label>
             <input
               name="fullAddress"
-              value={formData.fullAddress || ""}
+              value={data.fullAddress || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg p-2 text-black ${
                 errors.fullAddress ? "border-red-500" : "border-gray-400"
@@ -90,19 +131,26 @@ export default function PersonalInformationForm({
               Mobile Number:
             </label>
             <input
-              name="mobile" // Use 'mobile'
+              name="mobile"
               type="tel"
-              value={formData.mobile || ""} // Use 'mobile'
-              onChange={handleChange}
-              maxLength={13} // Allow for +63
+              value={data.mobile || ""}
+              onChange={(e) => {
+                const value = e.target.value;
+                // Regex to allow only numbers (or an empty string)
+                const numericRegex = /^[0-9]*$/;
+                
+                // Only call the original handleChange if the new value is numeric
+                if (numericRegex.test(value)) {
+                  handleChange(e);
+                }
+              }}
+              maxLength={13} 
+              inputMode="numeric" // Added for better mobile UX
               placeholder="09XXXXXXXXX"
               className={`w-full border rounded-lg p-2 text-black ${
-                errors.mobile ? "border-red-500" : "border-gray-400" // Use 'mobile'
+                errors.mobile ? "border-red-500" : "border-gray-400"
               }`}
             />
-            {errors.mobile && (
-              <p className="text-red-500 text-sm mt-1">{errors.mobile}</p> // Use 'mobile'
-            )}
           </div>
 
           {/* Email */}
@@ -111,20 +159,55 @@ export default function PersonalInformationForm({
               Email:
             </label>
             <input
-              name="email" // Use 'email'
+              name="email"
               type="email"
-              value={formData.email || ""} // Use 'email'
+              value={data.email || ""}
               onChange={handleChange}
               className={`w-full border rounded-lg p-2 text-black ${
-                errors.email ? "border-red-500" : "border-gray-400" // Use 'email'
+                errors.email ? "border-red-500" : "border-gray-400"
               }`}
             />
             {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p> // Use 'email'
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
             )}
           </div>
+
+          {/* --- NEW: Date of Birth --- */}
+          <div>
+            <label className="block text-sm font-semibold text-black">
+              Date of Birth:
+            </label>
+            <input
+              name="birthDate"
+              type="date"
+              value={data.birthDate || ""}
+              onChange={handleDateChange} // Use the special handler
+              max={new Date().toISOString().split("T")[0]} // Cannot be born in the future
+              className={`w-full border rounded-lg p-2 text-black ${
+                errors.birthDate ? "border-red-500" : "border-gray-400"
+              }`}
+            />
+            {errors.birthDate && (
+              <p className="text-red-500 text-sm mt-1">{errors.birthDate}</p>
+            )}
+          </div>
+
+          {/* --- NEW: Age --- */}
+          <div>
+            <label className="block text-sm font-semibold text-black">
+              Age:
+            </label>
+            <input
+              name="age"
+              type="number"
+              value={data.age || ""}
+              readOnly // Makes the input non-editable
+              placeholder="Age (auto-calculated)"
+              className="w-full border rounded-lg p-2 text-black bg-gray-100 cursor-not-allowed"
+            />
+          </div>
+
         </div>
-        {/* 🔼🔼🔼 --- END OF FIXES --- 🔼🔼🔼 */}
       </div>
 
       <div className="flex justify-between p-6">
@@ -146,4 +229,3 @@ export default function PersonalInformationForm({
     </form>
   );
 }
-

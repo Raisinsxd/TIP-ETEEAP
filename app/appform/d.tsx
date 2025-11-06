@@ -9,13 +9,14 @@ const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "YOUR_SUPABASE_ANON_KEY";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-/* ---------------- Types (Remain the same) ---------------- */
+/* ---------------- Types (Fully Updated) ---------------- */
 type EducationEntry = {
   schoolName: string;
   schoolAddress: string;
   degreeProgram?: string;
   yearGraduated: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
 };
 type EducationState = {
   tertiary: EducationEntry[];
@@ -27,7 +28,8 @@ type NonFormalEntry = {
   title: string;
   sponsor: string;
   venue: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
 };
 type NonFormalState = NonFormalEntry[];
 type CertificationEntry = {
@@ -56,19 +58,22 @@ type InventionState = InventionEntry[];
 type EmploymentEntry = {
   company: string;
   designation: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
   description: string;
 };
 type ConsultancyEntry = {
   consultancy: string;
   companyAddress: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
 };
 type SelfEmploymentEntry = {
   company: string;
   designation: string;
   reference: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
   description: string;
 };
 type WorkExperienceState = {
@@ -79,28 +84,32 @@ type WorkExperienceState = {
 type RecognitionEntry = {
   title: string;
   awardingBody: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
 };
 type RecognitionState = RecognitionEntry[];
 type MembershipEntry = {
   organization: string;
   designation: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
 };
 type ProjectEntry = {
   title: string;
   designation: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
   description: string;
 };
 type ResearchEntry = {
   title: string;
   institution: string;
-  dates: string;
+  startDate: string; // Changed from dates
+  endDate: string; // Added
   description: string;
 };
 
-/* ---------------- Validation types (fixed) ---------------- */
+/* ---------------- Validation types ---------------- */
 type FieldErrors = Partial<Record<keyof EducationEntry, string>>;
 type EducationErrors = Partial<Record<keyof EducationState, FieldErrors[]>>;
 type ValidationErrors = {
@@ -196,7 +205,6 @@ function FormalEducationSection({
     { key: "elementary", label: "Elementary" },
     { key: "technical", label: "Technical/Vocational" },
   ] as const;
-
   return (
     <div>
       {levels.map(({ key, label }) => {
@@ -286,9 +294,15 @@ function FormalEducationSection({
                         <input
                           type="text"
                           value={entry.degreeProgram || ""}
-                          onChange={(e) =>
-                            onChange(key, idx, "degreeProgram", e.target.value)
-                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Regex to allow only letters and spaces
+                            const textRegex = /^[A-Za-z\s]*$/;
+                            // Only update the state if the value matches the regex
+                            if (textRegex.test(value)) {
+                              onChange(key, idx, "degreeProgram", value);
+                            }
+                          }}
                           className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
                         />
                         <FieldError
@@ -308,32 +322,71 @@ function FormalEducationSection({
                         {isRequired && <span className="text-red-500">*</span>}
                       </label>
                       <input
-                        type="text"
+                        type="text" // Kept as text to allow for inline validation logic
                         value={entry.yearGraduated}
-                        onChange={(e) =>
-                          onChange(key, idx, "yearGraduated", e.target.value)
-                        }
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          // Regex to allow only numbers (or an empty string)
+                          const numericRegex = /^[0-9]*$/;
+                          // Only update the state if the value is numeric and not longer than 4 digits
+                          if (numericRegex.test(value) && value.length <= 4) {
+                            onChange(key, idx, "yearGraduated", value);
+                          }
+                        }}
+                        maxLength={4} // Enforces 4-digit limit at the input level
+                        inputMode="numeric" // Shows numeric keyboard on mobile devices
+                        pattern="[0-9]*" // Helps with browser-level validation
                         className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
                       />
                       <FieldError
                         message={errors?.[key]?.[idx]?.yearGraduated as string}
                       />
                     </div>
+
+                    {/* --- MODIFIED DATE BLOCK --- */}
                     <div className="col-span-2">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Inclusive Dates of Attendance{" "}
                         {isRequired && <span className="text-red-500">*</span>}
                       </label>
-                      <input
-                        type="text"
-                        value={entry.dates}
-                        onChange={(e) =>
-                          onChange(key, idx, "dates", e.target.value)
-                        }
-                        className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
-                      />
-                      <FieldError message={errors?.[key]?.[idx]?.dates as string} />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Start Date
+                          </label>
+                          <input
+                            type="date"
+                            value={entry.startDate}
+                            onChange={(e) =>
+                              onChange(key, idx, "startDate", e.target.value)
+                            }
+                            className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                          />
+                          <FieldError
+                            message={
+                              errors?.[key]?.[idx]?.startDate as string
+                            }
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            End Date
+                          </label>
+                          <input
+                            type="date"
+                            value={entry.endDate}
+                            onChange={(e) =>
+                              onChange(key, idx, "endDate", e.target.value)
+                            }
+                            className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                          />
+                          <FieldError
+                            message={errors?.[key]?.[idx]?.endDate as string}
+                          />
+                        </div>
+                      </div>
                     </div>
+                    {/* --- END MODIFIED BLOCK --- */}
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
                     {idx > 0 && (
@@ -364,7 +417,7 @@ function FormalEducationSection({
   );
 }
 
-/* --- (All other section components remain unchanged) --- */
+/* --- Non-Formal Education (Updated) --- */
 function NonFormalEducationSection({
   nonFormal,
   onChange,
@@ -425,17 +478,37 @@ function NonFormalEducationSection({
                 className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
               />
             </div>
+            {/* --- MODIFIED DATE BLOCK --- */}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Inclusive Dates
               </label>
-              <input
-                type="text"
-                value={entry.dates}
-                onChange={(e) => onChange(idx, "dates", e.target.value)}
-                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.startDate}
+                    onChange={(e) => onChange(idx, "startDate", e.target.value)}
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.endDate}
+                    onChange={(e) => onChange(idx, "endDate", e.target.value)}
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
             </div>
+            {/* --- END MODIFIED BLOCK --- */}
           </div>
           <div className="mt-4 flex justify-end gap-2">
             {idx > 0 && (
@@ -462,6 +535,8 @@ function NonFormalEducationSection({
     </div>
   );
 }
+
+/* --- Certification (No Dates Field) --- */
 function CertificationSection({
   certifications,
   onChange,
@@ -567,6 +642,8 @@ function CertificationSection({
     </div>
   );
 }
+
+/* --- Publication (No Dates Field) --- */
 function PublicationSection({
   publications,
   onChange,
@@ -611,7 +688,7 @@ function PublicationSection({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Circulation
+                Nature of Circulation
               </label>
               <input
                 type="text"
@@ -624,16 +701,12 @@ function PublicationSection({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Level
               </label>
-              <select
+              <input
+                type="text"
                 value={pub.level}
                 onChange={(e) => onChange(idx, "level", e.target.value)}
                 className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
-              >
-                <option value="">Select level</option>
-                <option value="Local">Local</option>
-                <option value="National">National</option>
-                <option value="International">International</option>
-              </select>
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -642,9 +715,7 @@ function PublicationSection({
               <input
                 type="text"
                 value={pub.yearPublished}
-                onChange={(e) =>
-                  onChange(idx, "yearPublished", e.target.value)
-                }
+                onChange={(e) => onChange(idx, "yearPublished", e.target.value)}
                 className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
               />
             </div>
@@ -655,9 +726,7 @@ function PublicationSection({
               <input
                 type="text"
                 value={pub.yearPresented}
-                onChange={(e) =>
-                  onChange(idx, "yearPresented", e.target.value)
-                }
+                onChange={(e) => onChange(idx, "yearPresented", e.target.value)}
                 className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
               />
             </div>
@@ -687,6 +756,8 @@ function PublicationSection({
     </div>
   );
 }
+
+/* --- Invention (No Dates Field) --- */
 function InventionSection({
   inventions,
   onChange,
@@ -716,7 +787,7 @@ function InventionSection({
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Title of the Invention/Patent
+                Title of the Invention
               </label>
               <input
                 type="text"
@@ -725,7 +796,7 @@ function InventionSection({
                 className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
               />
             </div>
-            <div>
+            <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Agency
               </label>
@@ -738,7 +809,7 @@ function InventionSection({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Application Date
+                Date of Application
               </label>
               <input
                 type="date"
@@ -753,16 +824,12 @@ function InventionSection({
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Level
               </label>
-              <select
+              <input
+                type="text"
                 value={inv.level}
                 onChange={(e) => onChange(idx, "level", e.target.value)}
                 className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
-              >
-                <option value="">Select level</option>
-                <option value="Local">Local</option>
-                <option value="National">National</option>
-                <option value="International">International</option>
-              </select>
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -771,9 +838,7 @@ function InventionSection({
               <input
                 type="text"
                 value={inv.yearPublished}
-                onChange={(e) =>
-                  onChange(idx, "yearPublished", e.target.value)
-                }
+                onChange={(e) => onChange(idx, "yearPublished", e.target.value)}
                 className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
               />
             </div>
@@ -803,6 +868,8 @@ function InventionSection({
     </div>
   );
 }
+
+/* --- Work Experience (Updated) --- */
 function WorkExperienceSection({
   work,
   onEmploymentChange,
@@ -832,6 +899,7 @@ function WorkExperienceSection({
 }) {
   return (
     <div>
+      {/* Employment */}
       <div className="flex justify-between items-center mb-3">
         <h4 className="font-semibold text-black">
           Employment{" "}
@@ -851,6 +919,80 @@ function WorkExperienceSection({
       </div>
       {work.employment.map((entry, idx) => (
         <div key={idx} className="bg-gray-50 p-6 rounded-xl shadow mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Company Name & Address
+              </label>
+              <input
+                type="text"
+                value={entry.company}
+                onChange={(e) =>
+                  onEmploymentChange(idx, "company", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                value={entry.designation}
+                onChange={(e) =>
+                  onEmploymentChange(idx, "designation", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Inclusive Dates
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.startDate}
+                    onChange={(e) =>
+                      onEmploymentChange(idx, "startDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.endDate}
+                    onChange={(e) =>
+                      onEmploymentChange(idx, "endDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description of Duties
+              </label>
+              <textarea
+                value={entry.description}
+                onChange={(e) =>
+                  onEmploymentChange(idx, "description", e.target.value)
+                }
+                rows={3}
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+          </div>
           <div className="mt-4 flex justify-end gap-2">
             {idx > 0 && (
               <button
@@ -873,8 +1015,11 @@ function WorkExperienceSection({
           </div>
         </div>
       ))}
-      <div className="flex justify-between items-center mt-6 mb-3">
-        <h4 className="font-semibold text-black">Consultancy</h4>
+
+      {/* Consultancy */}
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-3">
+        <h4 className="font-semibold text-black">Consultancy Services</h4>
         {work.consultancy.length === 0 && (
           <button
             type="button"
@@ -887,6 +1032,67 @@ function WorkExperienceSection({
       </div>
       {work.consultancy.map((entry, idx) => (
         <div key={idx} className="bg-gray-50 p-6 rounded-xl shadow mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nature of Consultancy
+              </label>
+              <input
+                type="text"
+                value={entry.consultancy}
+                onChange={(e) =>
+                  onConsultancyChange(idx, "consultancy", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Company Name & Address
+              </label>
+              <input
+                type="text"
+                value={entry.companyAddress}
+                onChange={(e) =>
+                  onConsultancyChange(idx, "companyAddress", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Inclusive Dates
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.startDate}
+                    onChange={(e) =>
+                      onConsultancyChange(idx, "startDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.endDate}
+                    onChange={(e) =>
+                      onConsultancyChange(idx, "endDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="mt-4 flex justify-end gap-2">
             {idx > 0 && (
               <button
@@ -909,13 +1115,11 @@ function WorkExperienceSection({
           </div>
         </div>
       ))}
-      <div className="flex justify-between items-center mt-6 mb-3">
-        <h4 className="font-semibold text-black">
-          Self-Employment{" "}
-          <span className="italic text-gray-600">
-            (Business Proprietorship)
-          </span>
-        </h4>
+
+      {/* Self-Employment */}
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-3">
+        <h4 className="font-semibold text-black">Self-Employment</h4>
         {work.selfEmployment.length === 0 && (
           <button
             type="button"
@@ -928,6 +1132,93 @@ function WorkExperienceSection({
       </div>
       {work.selfEmployment.map((entry, idx) => (
         <div key={idx} className="bg-gray-50 p-6 rounded-xl shadow mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Company Name & Address
+              </label>
+              <input
+                type="text"
+                value={entry.company}
+                onChange={(e) =>
+                  onSelfEmploymentChange(idx, "company", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                value={entry.designation}
+                onChange={(e) =>
+                  onSelfEmploymentChange(idx, "designation", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Inclusive Dates
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.startDate}
+                    onChange={(e) =>
+                      onSelfEmploymentChange(idx, "startDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.endDate}
+                    onChange={(e) =>
+                      onSelfEmploymentChange(idx, "endDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reference (Name, Designation, Contact No.)
+              </label>
+              <input
+                type="text"
+                value={entry.reference}
+                onChange={(e) =>
+                  onSelfEmploymentChange(idx, "reference", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description of Duties
+              </label>
+              <textarea
+                value={entry.description}
+                onChange={(e) =>
+                  onSelfEmploymentChange(idx, "description", e.target.value)
+                }
+                rows={3}
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+          </div>
           <div className="mt-4 flex justify-end gap-2">
             {idx > 0 && (
               <button
@@ -953,6 +1244,8 @@ function WorkExperienceSection({
     </div>
   );
 }
+
+/* --- Recognition (Updated) --- */
 function RecognitionSection({
   recognitions,
   onChange,
@@ -986,23 +1279,76 @@ function RecognitionSection({
       )}
       {recognitions.map((rec, idx) => (
         <div key={idx} className="bg-gray-50 p-6 rounded-xl shadow mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title of the Recognition
+              </label>
+              <input
+                type="text"
+                value={rec.title}
+                onChange={(e) => onChange(idx, "title", e.target.value)}
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Name and Address of Awarding Body
+              </label>
+              <input
+                type="text"
+                value={rec.awardingBody}
+                onChange={(e) => onChange(idx, "awardingBody", e.target.value)}
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Inclusive Dates
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={rec.startDate}
+                    onChange={(e) => onChange(idx, "startDate", e.target.value)}
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={rec.endDate}
+                    onChange={(e) => onChange(idx, "endDate", e.target.value)}
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="mt-4 flex justify-end gap-2">
             {idx > 0 && (
               <button
                 type="button"
                 onClick={() => onRemove(idx)}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg"
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
               >
-                Remove
+                <Minus size={16} /> Remove
               </button>
             )}
             {idx === recognitions.length - 1 && (
               <button
                 type="button"
                 onClick={onAdd}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg"
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
               >
-                Add
+                <Plus size={16} /> Add
               </button>
             )}
           </div>
@@ -1011,6 +1357,8 @@ function RecognitionSection({
     </div>
   );
 }
+
+/* --- Professional Development (Updated) --- */
 function ProfessionalDevelopmentSection({
   memberships,
   projects,
@@ -1025,7 +1373,7 @@ function ProfessionalDevelopmentSection({
   onChange: (
     category: "memberships" | "projects" | "research",
     index: number,
-    field: string,
+    field: string, // field name
     value: string
   ) => void;
   onAdd: (category: "memberships" | "projects" | "research") => void;
@@ -1035,35 +1383,342 @@ function ProfessionalDevelopmentSection({
   ) => void;
 }) {
   return (
-    <div className="space-y-8">
-      <div>
-        <div className="flex justify-between items-center mb-2">
-          <h4 className="font-semibold text-black">
-            1.{" "}
-            <span className="italic">Professional Organization Membership</span>
-          </h4>
-          {memberships.length === 0 && (
-            <button
-              type="button"
-              onClick={() => onAdd("memberships")}
-              className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg"
-            >
-              Add
-            </button>
-          )}
-        </div>
-        {memberships.map((entry, idx) => (
-          <div
-            key={idx}
-            className="bg-gray-50 p-6 rounded-xl shadow mb-4"
-          ></div>
-        ))}
+    <div>
+      {/* Memberships */}
+      <div className="flex justify-between items-center mb-3">
+        <h4 className="font-semibold text-black">
+          Membership in Professional Organizations
+        </h4>
+        {memberships.length === 0 && (
+          <button
+            type="button"
+            onClick={() => onAdd("memberships")}
+            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+          >
+            <Plus size={16} /> Add
+          </button>
+        )}
       </div>
+      {memberships.map((entry, idx) => (
+        <div key={idx} className="bg-gray-50 p-6 rounded-xl shadow mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Organization
+              </label>
+              <input
+                type="text"
+                value={entry.organization}
+                onChange={(e) =>
+                  onChange("memberships", idx, "organization", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                value={entry.designation}
+                onChange={(e) =>
+                  onChange("memberships", idx, "designation", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Inclusive Dates
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.startDate}
+                    onChange={(e) =>
+                      onChange("memberships", idx, "startDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.endDate}
+                    onChange={(e) =>
+                      onChange("memberships", idx, "endDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            {idx > 0 && (
+              <button
+                type="button"
+                onClick={() => onRemove("memberships", idx)}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+              >
+                <Minus size={16} /> Remove
+              </button>
+            )}
+            {idx === memberships.length - 1 && (
+              <button
+                type="button"
+                onClick={() => onAdd("memberships")}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+              >
+                <Plus size={16} /> Add
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {/* Projects */}
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-3">
+        <h4 className="font-semibold text-black">
+          Projects Undertaken (Limit to 5)
+        </h4>
+        {projects.length === 0 && (
+          <button
+            type="button"
+            onClick={() => onAdd("projects")}
+            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+          >
+            <Plus size={16} /> Add
+          </button>
+        )}
+      </div>
+      {projects.map((entry, idx) => (
+        <div key={idx} className="bg-gray-50 p-6 rounded-xl shadow mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title of Project
+              </label>
+              <input
+                type="text"
+                value={entry.title}
+                onChange={(e) =>
+                  onChange("projects", idx, "title", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Designation
+              </label>
+              <input
+                type="text"
+                value={entry.designation}
+                onChange={(e) =>
+                  onChange("projects", idx, "designation", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Inclusive Dates
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.startDate}
+                    onChange={(e) =>
+                      onChange("projects", idx, "startDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.endDate}
+                    onChange={(e) =>
+                      onChange("projects", idx, "endDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Brief Description of the Project
+              </label>
+              <textarea
+                value={entry.description}
+                onChange={(e) =>
+                  onChange("projects", idx, "description", e.target.value)
+                }
+                rows={3}
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            {idx > 0 && (
+              <button
+                type="button"
+                onClick={() => onRemove("projects", idx)}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+              >
+                <Minus size={16} /> Remove
+              </button>
+            )}
+            {idx === projects.length - 1 && projects.length < 5 && (
+              <button
+                type="button"
+                onClick={() => onAdd("projects")}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+              >
+                <Plus size={16} /> Add
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+
+      {/* Research */}
+      <hr className="my-6" />
+      <div className="flex justify-between items-center mb-3">
+        <h4 className="font-semibold text-black">
+          Research Undertaken (Limit to 5)
+        </h4>
+        {research.length === 0 && (
+          <button
+            type="button"
+            onClick={() => onAdd("research")}
+            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+          >
+            <Plus size={16} /> Add
+          </button>
+        )}
+      </div>
+      {research.map((entry, idx) => (
+        <div key={idx} className="bg-gray-50 p-6 rounded-xl shadow mb-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Title of Research
+              </label>
+              <input
+                type="text"
+                value={entry.title}
+                onChange={(e) =>
+                  onChange("research", idx, "title", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Institution
+              </label>
+              <input
+                type="text"
+                value={entry.institution}
+                onChange={(e) =>
+                  onChange("research", idx, "institution", e.target.value)
+                }
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Inclusive Dates
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.startDate}
+                    onChange={(e) =>
+                      onChange("research", idx, "startDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    End Date
+                  </label>
+                  <input
+                    type="date"
+                    value={entry.endDate}
+                    onChange={(e) =>
+                      onChange("research", idx, "endDate", e.target.value)
+                    }
+                    className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Brief Description of the Research
+              </label>
+              <textarea
+                value={entry.description}
+                onChange={(e) =>
+                  onChange("research", idx, "description", e.target.value)
+                }
+                rows={3}
+                className="w-full border border-gray-400 rounded-lg px-3 py-2 text-black bg-white"
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            {idx > 0 && (
+              <button
+                type="button"
+                onClick={() => onRemove("research", idx)}
+                className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+              >
+                <Minus size={16} /> Remove
+              </button>
+            )}
+            {idx === research.length - 1 && research.length < 5 && (
+              <button
+                type="button"
+                onClick={() => onAdd("research")}
+                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-lg flex items-center gap-1"
+              >
+                <Plus size={16} /> Add
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-/* ---------------- Parent Form ---------------- */
+/* ---------------- Parent Form (Updated State & Validation) ---------------- */
 export default function BackgroundAchievementsForm({
   formData,
   setFormData,
@@ -1075,55 +1730,116 @@ export default function BackgroundAchievementsForm({
   nextStep: () => void;
   prevStep: () => void;
 }) {
-  // --- Form Data States ---
-  const [education, setEducation] = useState<EducationState>({
-    tertiary: [
-      {
-        schoolName: "",
-        schoolAddress: "",
-        degreeProgram: "",
-        yearGraduated: "",
-        dates: "",
-      },
-    ],
-    secondary: [
-      { schoolName: "", schoolAddress: "", yearGraduated: "", dates: "" },
-    ],
-    elementary: [
-      { schoolName: "", schoolAddress: "", yearGraduated: "", dates: "" },
-    ],
-    technical: [],
-  });
-  const [nonFormal, setNonFormal] = useState<NonFormalState>([]);
-  const [certifications, setCertifications] = useState<CertificationState>([]);
-  const [publications, setPublications] = useState<PublicationState>([]);
-  const [inventions, setInventions] = useState<InventionState>([]);
-  const [work, setWork] = useState<WorkExperienceState>({
-    employment: [],
-    consultancy: [],
-    selfEmployment: [],
-  });
-  const [recognitions, setRecognitions] = useState<RecognitionState>([]);
-  const [memberships, setMemberships] = useState<MembershipEntry[]>([]);
-  const [projects, setProjects] = useState<ProjectEntry[]>([]);
-  const [research, setResearch] = useState<ResearchEntry[]>([]);
+  // --- Form Data States (Updated) ---
+  const [education, setEducation] = useState<EducationState>(
+    formData.education || {
+      tertiary: [
+        {
+          schoolName: "",
+          schoolAddress: "",
+          degreeProgram: "",
+          yearGraduated: "",
+          startDate: "", // Updated
+          endDate: "", // Updated
+        },
+      ],
+      secondary: [
+        {
+          schoolName: "",
+          schoolAddress: "",
+          yearGraduated: "",
+          startDate: "", // Updated
+          endDate: "", // Updated
+        },
+      ],
+      elementary: [
+        {
+          schoolName: "",
+          schoolAddress: "",
+          yearGraduated: "",
+          startDate: "", // Updated
+          endDate: "", // Updated
+        },
+      ],
+      technical: [],
+    }
+  );
+  const [nonFormal, setNonFormal] = useState<NonFormalState>(
+    formData.non_formal_education || []
+  );
+  const [certifications, setCertifications] = useState<CertificationState>(
+    formData.certifications || []
+  );
+  const [publications, setPublications] = useState<PublicationState>(
+    formData.publications || []
+  );
+  const [inventions, setInventions] = useState<InventionState>(
+    formData.inventions || []
+  );
+  const [work, setWork] = useState<WorkExperienceState>(
+    formData.work_experience || {
+      employment: [],
+      consultancy: [],
+      selfEmployment: [],
+    }
+  );
+  const [recognitions, setRecognitions] = useState<RecognitionState>(
+    formData.recognitions || []
+  );
+  const [memberships, setMemberships] = useState<MembershipEntry[]>(
+    formData.professional_development?.memberships || []
+  );
+  const [projects, setProjects] = useState<ProjectEntry[]>(
+    formData.professional_development?.projects || []
+  );
+  const [research, setResearch] = useState<ResearchEntry[]>(
+    formData.professional_development?.research || []
+  );
 
-  // --- State for "None" Toggles ---
-  const [hasNoTechnical, setHasNoTechnical] = useState(false);
-  const [hasNoNonFormal, setHasNoNonFormal] = useState(false);
-  const [hasNoCertifications, setHasNoCertifications] = useState(false);
-  const [hasNoPublications, setHasNoPublications] = useState(false);
-  const [hasNoInventions, setHasNoInventions] = useState(false);
-  const [hasNoWork, setHasNoWork] = useState(false);
-  const [hasNoRecognitions, setHasNoRecognitions] = useState(false);
-  const [hasNoProfDev, setHasNoProfDev] = useState(false);
+  // --- "None" Checkbox States ---
+  const [hasNoTechnical, setHasNoTechnical] = useState(
+    formData.education?.technical?.length === 0 &&
+      formData.education?.tertiary?.length > 0 // Check if form was loaded
+  );
+  const [hasNoNonFormal, setHasNoNonFormal] = useState(
+    formData.non_formal_education?.length === 0 &&
+      formData.education?.tertiary?.length > 0
+  );
+  const [hasNoCertifications, setHasNoCertifications] = useState(
+    formData.certifications?.length === 0 &&
+      formData.education?.tertiary?.length > 0
+  );
+  const [hasNoPublications, setHasNoPublications] = useState(
+    formData.publications?.length === 0 &&
+      formData.education?.tertiary?.length > 0
+  );
+  const [hasNoInventions, setHasNoInventions] = useState(
+    formData.inventions?.length === 0 &&
+      formData.education?.tertiary?.length > 0
+  );
+  const [hasNoWork, setHasNoWork] = useState(
+    formData.work_experience?.employment?.length === 0 &&
+      formData.work_experience?.consultancy?.length === 0 &&
+      formData.work_experience?.selfEmployment?.length === 0 &&
+      formData.education?.tertiary?.length > 0
+  );
+  const [hasNoRecognitions, setHasNoRecognitions] = useState(
+    formData.recognitions?.length === 0 &&
+      formData.education?.tertiary?.length > 0
+  );
+  const [hasNoProfDev, setHasNoProfDev] = useState(
+    formData.professional_development?.memberships?.length === 0 &&
+      formData.professional_development?.projects?.length === 0 &&
+      formData.professional_development?.research?.length === 0 &&
+      formData.education?.tertiary?.length > 0
+  );
 
   // --- State for Submission and Errors ---
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [errors, setErrors] = useState<ValidationErrors>({});
 
-  /* --- Event Handlers --- */
+  /* --- Event Handlers (Updated) --- */
   const handleNonFormalChange = (
     index: number,
     field: keyof NonFormalEntry,
@@ -1138,18 +1854,19 @@ export default function BackgroundAchievementsForm({
   const addNonFormal = () =>
     setNonFormal((prev) => [
       ...prev,
-      { title: "", sponsor: "", venue: "", dates: "" },
+      { title: "", sponsor: "", venue: "", startDate: "", endDate: "" }, // Updated
     ]);
   const removeNonFormal = (index: number) =>
     setNonFormal((prev) => prev.filter((_, i) => i !== index));
+
   const handleCertificationChange = (
-    index: number,
+    idx: number,
     field: keyof CertificationEntry,
     value: string
   ) => {
     setCertifications((prev) => {
       const updated = [...prev];
-      updated[index] = { ...updated[index], [field]: value };
+      updated[idx] = { ...updated[idx], [field]: value };
       return updated;
     });
   };
@@ -1160,6 +1877,7 @@ export default function BackgroundAchievementsForm({
     ]);
   const removeCertification = (index: number) =>
     setCertifications((prev) => prev.filter((_, i) => i !== index));
+
   const handleEducationChange = (
     level: keyof EducationState,
     index: number,
@@ -1177,7 +1895,8 @@ export default function BackgroundAchievementsForm({
       schoolName: "",
       schoolAddress: "",
       yearGraduated: "",
-      dates: "",
+      startDate: "", // Updated
+      endDate: "", // Updated
     };
     if (level !== "secondary" && level !== "elementary") {
       newEntry.degreeProgram = "";
@@ -1187,11 +1906,13 @@ export default function BackgroundAchievementsForm({
       [level]: [...prev[level], newEntry],
     }));
   };
-  const removeEducation = (level: keyof EducationState, index: number) =>
+  const removeEducation = (level: keyof EducationState, index: number) => {
     setEducation((prev) => ({
       ...prev,
       [level]: prev[level].filter((_, i) => i !== index),
     }));
+  };
+
   const handlePublicationChange = (
     index: number,
     field: keyof PublicationEntry,
@@ -1216,6 +1937,7 @@ export default function BackgroundAchievementsForm({
     ]);
   const removePublication = (index: number) =>
     setPublications((prev) => prev.filter((_, i) => i !== index));
+
   const handleInventionChange = (
     index: number,
     field: keyof InventionEntry,
@@ -1240,6 +1962,8 @@ export default function BackgroundAchievementsForm({
     ]);
   const removeInvention = (index: number) =>
     setInventions((prev) => prev.filter((_, i) => i !== index));
+
+  // --- Work Handlers ---
   const handleEmploymentChange = (
     i: number,
     f: keyof EmploymentEntry,
@@ -1270,27 +1994,43 @@ export default function BackgroundAchievementsForm({
       updated[i] = { ...updated[i], [f]: v };
       return { ...prev, selfEmployment: updated };
     });
+
   const addWork = (type: keyof WorkExperienceState) =>
     setWork((prev) => {
       const empty: any =
         type === "employment"
-          ? { company: "", designation: "", dates: "", description: "" }
+          ? {
+              company: "",
+              designation: "",
+              startDate: "", // Updated
+              endDate: "", // Updated
+              description: "",
+            }
           : type === "consultancy"
-          ? { consultancy: "", companyAddress: "", dates: "" }
+          ? {
+              consultancy: "",
+              companyAddress: "",
+              startDate: "", // Updated
+              endDate: "", // Updated
+            }
           : {
               company: "",
               designation: "",
               reference: "",
-              dates: "",
+              startDate: "", // Updated
+              endDate: "", // Updated
               description: "",
             };
       return { ...prev, [type]: [...prev[type], empty] };
     });
+
   const removeWork = (type: keyof WorkExperienceState, idx: number) =>
     setWork((prev) => ({
       ...prev,
       [type]: prev[type].filter((_, i) => i !== idx),
     }));
+
+  // --- Recognition Handlers ---
   const handleRecognitionChange = (
     index: number,
     field: keyof RecognitionEntry,
@@ -1305,10 +2045,12 @@ export default function BackgroundAchievementsForm({
   const addRecognition = () =>
     setRecognitions((prev) => [
       ...prev,
-      { title: "", awardingBody: "", dates: "" },
+      { title: "", awardingBody: "", startDate: "", endDate: "" }, // Updated
     ]);
   const removeRecognition = (index: number) =>
     setRecognitions((prev) => prev.filter((_, i) => i !== index));
+
+  // --- Prof. Dev. Handlers ---
   const handleProfessionalDevChange = (
     category: "memberships" | "projects" | "research",
     index: number,
@@ -1318,19 +2060,28 @@ export default function BackgroundAchievementsForm({
     if (category === "memberships") {
       setMemberships((prev) => {
         const updated = [...prev];
-        updated[index] = { ...(updated[index] as any), [field]: value } as MembershipEntry;
+        updated[index] = {
+          ...(updated[index] as any),
+          [field]: value,
+        } as MembershipEntry;
         return updated;
       });
     } else if (category === "projects") {
       setProjects((prev) => {
         const updated = [...prev];
-        updated[index] = { ...(updated[index] as any), [field]: value } as ProjectEntry;
+        updated[index] = {
+          ...(updated[index] as any),
+          [field]: value,
+        } as ProjectEntry;
         return updated;
       });
     } else {
       setResearch((prev) => {
         const updated = [...prev];
-        updated[index] = { ...(updated[index] as any), [field]: value } as ResearchEntry;
+        updated[index] = {
+          ...(updated[index] as any),
+          [field]: value,
+        } as ResearchEntry;
         return updated;
       });
     }
@@ -1341,17 +2092,29 @@ export default function BackgroundAchievementsForm({
     if (category === "memberships") {
       setMemberships((prev) => [
         ...prev,
-        { organization: "", designation: "", dates: "" },
+        { organization: "", designation: "", startDate: "", endDate: "" }, // Updated
       ]);
     } else if (category === "projects") {
       setProjects((prev) => [
         ...prev,
-        { title: "", designation: "", dates: "", description: "" },
+        {
+          title: "",
+          designation: "",
+          startDate: "", // Updated
+          endDate: "", // Updated
+          description: "",
+        },
       ]);
     } else {
       setResearch((prev) => [
         ...prev,
-        { title: "", institution: "", dates: "", description: "" },
+        {
+          title: "",
+          institution: "",
+          startDate: "", // Updated
+          endDate: "", // Updated
+          description: "",
+        },
       ]);
     }
   };
@@ -1368,21 +2131,21 @@ export default function BackgroundAchievementsForm({
     }
   };
 
-  /* --- Navigation & Submission --- */
-  const handleBack = () => prevStep();
+  /* --- Form Submission and Validation (FIXED) --- */
 
-  const validateForm = (): boolean => {
-    const newErrors: ValidationErrors = { education: {} };
+  const validateForm = () => {
     let isValid = true;
-    const requiredLevels: (keyof EducationState)[] = [
+    const newErrors: ValidationErrors = { education: {} };
+    const levels: (keyof EducationState)[] = [
       "tertiary",
       "secondary",
       "elementary",
     ];
-    requiredLevels.forEach((level) => {
+
+    levels.forEach((level) => {
       newErrors.education![level] = [];
       education[level].forEach((entry, index) => {
-        const entryErrors: any = {};
+        const entryErrors: Partial<EducationEntry> = {};
         if (!entry.schoolName.trim()) {
           entryErrors.schoolName = "School name is required.";
           isValid = false;
@@ -1395,10 +2158,16 @@ export default function BackgroundAchievementsForm({
           entryErrors.yearGraduated = "Year graduated is required.";
           isValid = false;
         }
-        if (!entry.dates.trim()) {
-          entryErrors.dates = "Attendance dates are required.";
+        // --- THE FIX ---
+        if (!entry.startDate.trim()) {
+          entryErrors.startDate = "Start date is required.";
           isValid = false;
         }
+        if (!entry.endDate.trim()) {
+          entryErrors.endDate = "End date is required.";
+          isValid = false;
+        }
+        // --- END FIX ---
         if (level === "tertiary" && !entry.degreeProgram?.trim()) {
           entryErrors.degreeProgram = "Degree program is required.";
           isValid = false;
@@ -1406,13 +2175,46 @@ export default function BackgroundAchievementsForm({
         newErrors.education![level]![index] = entryErrors;
       });
     });
+
+    // Validate technical only if the checkbox isn't checked
+    if (!hasNoTechnical) {
+      newErrors.education!.technical = [];
+      education.technical.forEach((entry, index) => {
+        const entryErrors: Partial<EducationEntry> = {};
+        if (!entry.schoolName.trim()) {
+          entryErrors.schoolName = "School name is required.";
+          isValid = false;
+        }
+        if (!entry.schoolAddress.trim()) {
+          entryErrors.schoolAddress = "School address is required.";
+          isValid = false;
+        }
+        if (!entry.yearGraduated.trim()) {
+          entryErrors.yearGraduated = "Year graduated is required.";
+          isValid = false;
+        }
+        if (!entry.startDate.trim()) {
+          entryErrors.startDate = "Start date is required.";
+          isValid = false;
+        }
+        if (!entry.endDate.trim()) {
+          entryErrors.endDate = "End date is required.";
+          isValid = false;
+        }
+        if (!entry.degreeProgram?.trim()) {
+          entryErrors.degreeProgram = "Degree program is required.";
+          isValid = false;
+        }
+        newErrors.education!.technical![index] = entryErrors;
+      });
+    }
+
     setErrors(newErrors);
     return isValid;
   };
 
-  // This function now correctly saves the data to the parent state and moves to the next step.
-  // It no longer tries to submit to Supabase.
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Prevent default form submission
     setSubmitError(null);
 
     // Run your validation first
@@ -1420,16 +2222,27 @@ export default function BackgroundAchievementsForm({
       setSubmitError(
         "Please fill in all required fields marked with an asterisk (*)."
       );
+      // Find the first error and scroll to it
+      const firstError = document.querySelector(".text-red-600");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
       return;
     }
 
     setIsSubmitting(true);
 
     // Prepare all the data from this step's internal state
-    const finalEducationData = { ...education };
-    if (hasNoTechnical) {
-      finalEducationData.technical = [];
-    }
+    const finalEducationData = {
+      ...education,
+      technical: hasNoTechnical ? [] : education.technical,
+    };
+
+    const finalWorkData = {
+      employment: hasNoWork ? [] : work.employment,
+      consultancy: hasNoWork ? [] : work.consultancy,
+      selfEmployment: hasNoWork ? [] : work.selfEmployment,
+    };
 
     const professional_development = {
       memberships: hasNoProfDev ? [] : memberships,
@@ -1440,204 +2253,220 @@ export default function BackgroundAchievementsForm({
     // Update the main state in appform/page.tsx using the setFormData prop
     setFormData((prev: any) => ({
       ...prev,
-      // This saves all the data from this step into the main state
-      education_background: finalEducationData,
+      education: finalEducationData,
       non_formal_education: hasNoNonFormal ? [] : nonFormal,
       certifications: hasNoCertifications ? [] : certifications,
       publications: hasNoPublications ? [] : publications,
       inventions: hasNoInventions ? [] : inventions,
-      work_experiences: hasNoWork ? [] : work,
+      work_experience: finalWorkData,
       recognitions: hasNoRecognitions ? [] : recognitions,
       professional_development: professional_development,
     }));
 
-    // We're done! Move to the next step.
-    setIsSubmitting(false);
+    // Move to the next step
     nextStep();
   };
 
+  const handleBack = () => {
+    // Save current data to main state *without* validating
+    // This ensures data is not lost when moving backward
+    setFormData((prev: any) => ({
+      ...prev,
+      education: {
+        ...education,
+        technical: hasNoTechnical ? [] : education.technical,
+      },
+      non_formal_education: hasNoNonFormal ? [] : nonFormal,
+      certifications: hasNoCertifications ? [] : certifications,
+      publications: hasNoPublications ? [] : publications,
+      inventions: hasNoInventions ? [] : inventions,
+      work_experience: {
+        employment: hasNoWork ? [] : work.employment,
+        consultancy: hasNoWork ? [] : work.consultancy,
+        selfEmployment: hasNoWork ? [] : work.selfEmployment,
+      },
+      recognitions: hasNoRecognitions ? [] : recognitions,
+      professional_development: {
+        memberships: hasNoProfDev ? [] : memberships,
+        projects: hasNoProfDev ? [] : projects,
+        research: hasNoProfDev ? [] : research,
+      },
+    }));
+    prevStep();
+  };
+
   return (
-    <div className="min-h-screen flex justify-center items-center bg-gray-100 p-6">
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit(e);
-        }}
-        className="bg-white shadow-lg rounded-2xl flex flex-col overflow-y-auto"
-        style={{ width: "896px", height: "803.5px" }}
-      >
-        <h2 className="text-center font-bold text-xl mt-4 mb-2 text-black">
-          APPLICATION FORM AND PRELIMINARY ASSESSMENT FORM
-        </h2>
-        <div className="bg-yellow-100 text-black px-6 py-3 rounded-lg text-sm mb-4 flex items-center gap-2 mx-auto w-auto whitespace-nowrap shadow">
-          <span>⚠️</span>
-          <span>
-            All information indicated herein shall be certified true and correct
-          </span>
-        </div>
+    <form onSubmit={handleSubmit} className="w-full bg-white">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto mb-2 max-h-[70vh] px-6 pt-2 pb-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
         {submitError && (
-          <div className="text-red-600 bg-red-100 p-3 rounded-lg mx-6 text-center">
+          <div className="mb-4 text-center text-red-600 font-semibold bg-red-100 p-3 rounded-lg">
             {submitError}
           </div>
         )}
 
-        <div className="flex-1 overflow-y-auto mb-2 max-h-[70vh] px-6 pt-2 pb-4 scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100">
-          <AccordionItem title="C. Educational Background" defaultOpen>
-            <FormalEducationSection
-              education={education}
-              onChange={handleEducationChange}
-              onAdd={addEducation}
-              onRemove={removeEducation}
-              errors={errors.education}
-              hasNoTechnical={hasNoTechnical}
-              onHasNoTechnicalChange={() => setHasNoTechnical(!hasNoTechnical)}
+        {/* --- C. Educational Background --- */}
+        <AccordionItem title="C. Educational Background" defaultOpen>
+          <FormalEducationSection
+            education={education}
+            onChange={handleEducationChange}
+            onAdd={addEducation}
+            onRemove={removeEducation}
+            errors={errors.education}
+            hasNoTechnical={hasNoTechnical}
+            onHasNoTechnicalChange={() => setHasNoTechnical(!hasNoTechnical)}
+          />
+          <hr className="my-6" />
+          <h4 className="font-semibold text-black mb-2">
+            Non-Formal Education (Optional)
+          </h4>
+          <NoneCheckbox
+            id="none-nonformal"
+            label="I have no Non-Formal Education to declare."
+            checked={hasNoNonFormal}
+            onChange={() => setHasNoNonFormal(!hasNoNonFormal)}
+          />
+          {!hasNoNonFormal && (
+            <NonFormalEducationSection
+              nonFormal={nonFormal}
+              onChange={handleNonFormalChange}
+              onAdd={addNonFormal}
+              onRemove={removeNonFormal}
             />
-            <hr className="my-6" />
-            <h4 className="font-semibold text-black mb-2">
-              Non-Formal Education (Optional)
-            </h4>
-            <NoneCheckbox
-              id="none-nonformal"
-              label="I have no Non-Formal Education to declare."
-              checked={hasNoNonFormal}
-              onChange={() => setHasNoNonFormal(!hasNoNonFormal)}
-            />
-            {!hasNoNonFormal && (
-              <NonFormalEducationSection
-                nonFormal={nonFormal}
-                onChange={handleNonFormalChange}
-                onAdd={addNonFormal}
-                onRemove={removeNonFormal}
-              />
-            )}
-            <hr className="my-6" />
-            <h4 className="font-semibold text-black mb-2">
-              Other Certifications (Optional)
-            </h4>
-            <NoneCheckbox
-              id="none-certs"
-              label="I have no Certifications to declare."
-              checked={hasNoCertifications}
-              onChange={() => setHasNoCertifications(!hasNoCertifications)}
-            />
-            {!hasNoCertifications && (
-              <CertificationSection
-                certifications={certifications}
-                onChange={handleCertificationChange}
-                onAdd={addCertification}
-                onRemove={removeCertification}
-              />
-            )}
-          </AccordionItem>
+          )}
+        </AccordionItem>
 
-          <AccordionItem title="D. Publication (Optional)">
-            <NoneCheckbox
-              id="none-publications"
-              label="I have no Publications to declare."
-              checked={hasNoPublications}
-              onChange={() => setHasNoPublications(!hasNoPublications)}
+        {/* --- D. Certifications --- */}
+        <AccordionItem title="D. Certifications (Optional)">
+          <NoneCheckbox
+            id="none-certifications"
+            label="I have no Certifications to declare."
+            checked={hasNoCertifications}
+            onChange={() => setHasNoCertifications(!hasNoCertifications)}
+          />
+          {!hasNoCertifications && (
+            <CertificationSection
+              certifications={certifications}
+              onChange={handleCertificationChange}
+              onAdd={addCertification}
+              onRemove={removeCertification}
             />
-            {!hasNoPublications && (
-              <PublicationSection
-                publications={publications}
-                onChange={handlePublicationChange}
-                onAdd={addPublication}
-                onRemove={removePublication}
-              />
-            )}
-          </AccordionItem>
+          )}
+        </AccordionItem>
 
-          <AccordionItem title="E. Invention/Patent (Optional)">
-            <NoneCheckbox
-              id="none-inventions"
-              label="I have no Inventions/Patents to declare."
-              checked={hasNoInventions}
-              onChange={() => setHasNoInventions(!hasNoInventions)}
+        {/* --- E. Publications --- */}
+        <AccordionItem title="E. Publications (Optional)">
+          <NoneCheckbox
+            id="none-publications"
+            label="I have no Publications to declare."
+            checked={hasNoPublications}
+            onChange={() => setHasNoPublications(!hasNoPublications)}
+          />
+          {!hasNoPublications && (
+            <PublicationSection
+              publications={publications}
+              onChange={handlePublicationChange}
+              onAdd={addPublication}
+              onRemove={removePublication}
             />
-            {!hasNoInventions && (
-              <InventionSection
-                inventions={inventions}
-                onChange={handleInventionChange}
-                onAdd={addInvention}
-                onRemove={removeInvention}
-              />
-            )}
-          </AccordionItem>
+          )}
+        </AccordionItem>
 
-          <AccordionItem title="F. Work Experiences (Optional)">
-            <NoneCheckbox
-              id="none-work"
-              label="I have no Work Experience to declare."
-              checked={hasNoWork}
-              onChange={() => setHasNoWork(!hasNoWork)}
+        {/* --- F. Inventions --- */}
+        <AccordionItem title="F. Inventions (Optional)">
+          <NoneCheckbox
+            id="none-inventions"
+            label="I have no Inventions to declare."
+            checked={hasNoInventions}
+            onChange={() => setHasNoInventions(!hasNoInventions)}
+          />
+          {!hasNoInventions && (
+            <InventionSection
+              inventions={inventions}
+              onChange={handleInventionChange}
+              onAdd={addInvention}
+              onRemove={removeInvention}
             />
-            {!hasNoWork && (
-              <WorkExperienceSection
-                work={work}
-                onEmploymentChange={handleEmploymentChange}
-                onConsultancyChange={handleConsultancyChange}
-                onSelfEmploymentChange={handleSelfEmploymentChange}
-                onAdd={addWork}
-                onRemove={removeWork}
-              />
-            )}
-          </AccordionItem>
+          )}
+        </AccordionItem>
 
-          <AccordionItem title="G. Recognitions Received (Optional)">
-            <NoneCheckbox
-              id="none-recognitions"
-              label="I have no Recognitions to declare."
-              checked={hasNoRecognitions}
-              onChange={() => setHasNoRecognitions(!hasNoRecognitions)}
+        {/* --- G. Work Experience --- */}
+        <AccordionItem title="G. Work Experience (Optional)">
+          <NoneCheckbox
+            id="none-work"
+            label="I have no Work Experience to declare."
+            checked={hasNoWork}
+            onChange={() => setHasNoWork(!hasNoWork)}
+          />
+          {!hasNoWork && (
+            <WorkExperienceSection
+              work={work}
+              onEmploymentChange={handleEmploymentChange}
+              onConsultancyChange={handleConsultancyChange}
+              onSelfEmploymentChange={handleSelfEmploymentChange}
+              onAdd={addWork}
+              onRemove={removeWork}
             />
-            {!hasNoRecognitions && (
-              <RecognitionSection
-                recognitions={recognitions}
-                onChange={handleRecognitionChange}
-                onAdd={addRecognition}
-                onRemove={removeRecognition}
-              />
-            )}
-          </AccordionItem>
+          )}
+        </AccordionItem>
 
-          <AccordionItem title="H. Professional Development Activities (Optional)">
-            <NoneCheckbox
-              id="none-profdev"
-              label="I have no Professional Development Activities to declare."
-              checked={hasNoProfDev}
-              onChange={() => setHasNoProfDev(!hasNoProfDev)}
+        {/* --- H. Recognitions --- */}
+        <AccordionItem title="H. Recognitions (Optional)">
+          <NoneCheckbox
+            id="none-recognitions"
+            label="I have no Recognitions to declare."
+            checked={hasNoRecognitions}
+            onChange={() => setHasNoRecognitions(!hasNoRecognitions)}
+          />
+          {!hasNoRecognitions && (
+            <RecognitionSection
+              recognitions={recognitions}
+              onChange={handleRecognitionChange}
+              onAdd={addRecognition}
+              onRemove={removeRecognition}
             />
-            {!hasNoProfDev && (
-              <ProfessionalDevelopmentSection
-                memberships={memberships}
-                projects={projects}
-                research={research}
-                onChange={handleProfessionalDevChange}
-                onAdd={addProfessionalDev}
-                onRemove={removeProfessionalDev}
-              />
-            )}
-          </AccordionItem>
-        </div>
+          )}
+        </AccordionItem>
 
-        <div className="flex justify-between mt-2 px-6 pb-4">
-          <button
-            type="button"
-            onClick={handleBack}
-            disabled={isSubmitting}
-            className="bg-gray-300 text-black font-semibold py-2 px-6 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
-          >
-            ← Back
-          </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="bg-yellow-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? "Submitting..." : "Next →"}
-          </button>
-        </div>
-      </form>
-    </div>
+        {/* --- I. Professional Development --- */}
+        <AccordionItem title="I. Professional Development Activities (Optional)">
+          <NoneCheckbox
+            id="none-profdev"
+            label="I have no Professional Development Activities to declare."
+            checked={hasNoProfDev}
+            onChange={() => setHasNoProfDev(!hasNoProfDev)}
+          />
+          {!hasNoProfDev && (
+            <ProfessionalDevelopmentSection
+              memberships={memberships}
+              projects={projects}
+              research={research}
+              onChange={handleProfessionalDevChange}
+              onAdd={addProfessionalDev}
+              onRemove={removeProfessionalDev}
+            />
+          )}
+        </AccordionItem>
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-2 px-6 pb-4">
+        <button
+          type="button"
+          onClick={handleBack}
+          disabled={isSubmitting}
+          className="bg-gray-300 text-black font-semibold py-2 px-6 rounded-lg hover:bg-gray-400 transition-colors disabled:opacity-50"
+        >
+          ← Back
+        </button>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="bg-yellow-500 text-white font-semibold py-2 px-6 rounded-lg hover:bg-yellow-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSubmitting ? "Submitting..." : "Next →"}
+        </button>
+      </div>
+    </form>
   );
 }
