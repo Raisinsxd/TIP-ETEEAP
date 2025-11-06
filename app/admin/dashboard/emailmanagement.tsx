@@ -3,7 +3,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import supabaseBrowserClient from '@/lib/supabase/client';
 
 import dynamic from 'next/dynamic';
-import { CheckCircle, XCircle, ChevronLeft, AlertTriangle, Loader2, Mail, Plus, Edit2, Search, RefreshCw, FileText, History, Trash2 } from 'lucide-react';
+import { CheckCircle, XCircle, ChevronLeft, AlertTriangle, Loader2, Mail, Plus, Edit2, Search, RefreshCw, FileText, History, Trash2, Eye } from 'lucide-react';
+import { FC, ReactNode } from "react";
 
 // Dynamically import ReactQuill to avoid SSR issues
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -31,6 +32,8 @@ interface EmailLog {
   subject: string;
   status: 'Sent' | 'Failed';
   created_at: string;
+  error_details: string | null;
+  body: string | null; // Assuming the body is stored in the log for viewing
 }
 
 interface User {
@@ -160,8 +163,11 @@ const EmailManagement = () => {
   const [historyStatusFilter, setHistoryStatusFilter] = useState<'all' | 'Sent' | 'Failed'>('all');
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [highlightedLogId, setHighlightedLogId] = useState<number | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(1); // For pagination
   const emailsPerPage = 10;
+  const [selectedLog, setSelectedLog] = useState<EmailLog | null>(null);
+  const [isLogDetailModalOpen, setIsLogDetailModalOpen] = useState(false);
+  const [isFetchingBody, setIsFetchingBody] = useState(false);
 
   // --- Data Fetching and Effects ---
 
@@ -172,7 +178,7 @@ const EmailManagement = () => {
 
       const response = await fetch('/api/email-history');
 
-      if (!response.ok) {
+      if (!response.ok) { // Check if the response was successful
         throw new Error('Failed to fetch email logs');
       }
       const data = await response.json();
@@ -199,7 +205,7 @@ const EmailManagement = () => {
         const [templatesResponse, usersResponse, emailLogsResponse] = await Promise.all([
           fetch('/api/templates'),
           supabaseBrowserClient.from('users').select('id, email'),
-          fetch('/api/email-history'),
+          fetch('/api/email-history'), // Fetch email logs
         ]);
 
         const templatesData = await templatesResponse.json();
@@ -212,7 +218,7 @@ const EmailManagement = () => {
           setUsers(usersData || []);
         }
 
-        const emailLogsData = await emailLogsResponse.json();
+        const emailLogsData = await emailLogsResponse.json(); // Parse email logs
         if (emailLogsResponse.ok) {
           setEmailLog(emailLogsData || []);
         } else {
@@ -407,11 +413,39 @@ const EmailManagement = () => {
           const handleApplyTemplate = () => {
             if (!selectedTemplateId) return;
             const template = templates.find(t => t.id === parseInt(selectedTemplateId));
-            if (template) {
-              setSubject(template.subject);
-              setCustomMessage(template.content);
-            }
-          };  // --- Child Components / Render Functions ---
+                        if (template) {
+                          setSubject(template.subject);
+                          setCustomMessage(template.content);
+                        }
+                      };
+
+  const handleViewLogDetails = async (log: EmailLog) => {
+    setSelectedLog(log);
+    setIsLogDetailModalOpen(true);
+
+    // If the log body isn't already fetched, fetch it now.
+    if (!log.body) {
+      setIsFetchingBody(true);
+      try {
+        // Assuming you have an endpoint to get a single log's details
+        const response = await fetch(`/api/email-history/${log.id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch email body.');
+        }
+        const data = await response.json();
+        // Update the selected log with the full body
+        setSelectedLog(prevLog => prevLog ? { ...prevLog, body: data.body } : null);
+      } catch (error) {
+        console.error("Error fetching email body:", error);
+        // Optionally, show an error in the modal
+        setSelectedLog(prevLog => prevLog ? { ...prevLog, body: '<p>Failed to load email content.</p>' } : null);
+      } finally {
+        setIsFetchingBody(false);
+      }
+    }
+  };
+  
+  // --- Child Components / Render Functions ---
 
   const TemplateEditor = () => {
     const [name, setName] = useState(editingTemplate?.name || '');
@@ -762,6 +796,7 @@ const EmailManagement = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -783,6 +818,14 @@ const EmailManagement = () => {
                         <StatusBadge status={log.status} />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{new Date(log.created_at).toLocaleString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <button
+                          onClick={() => handleViewLogDetails(log)}
+                          className="text-gray-500 hover:text-gray-700 p-1 rounded-full hover:bg-gray-100"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                      </td>
                     </tr>
                   ))
                 )}
@@ -812,6 +855,47 @@ const EmailManagement = () => {
             </button>
           </div>
         )}
+      </div>
+    );
+  };
+
+  const LogDetailModal = () => {
+    if (!isLogDetailModalOpen || !selectedLog) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl text-black relative">
+          <button 
+            onClick={() => setIsLogDetailModalOpen(false)}
+            className="absolute top-3 right-3 text-gray-500 hover:text-gray-800"
+          >
+            <XCircle className="w-6 h-6" />
+          </button>
+          <h3 className="text-lg font-semibold mb-4">Email Log Details</h3>
+          <div className="space-y-3 text-sm">
+            <p><strong>Recipient:</strong> {selectedLog.recipient}</p>
+            <p><strong>Subject:</strong> {selectedLog.subject}</p>
+            <p><strong>Status:</strong> <StatusBadge status={selectedLog.status} /></p>
+            <p><strong>Date:</strong> {new Date(selectedLog.created_at).toLocaleString()}</p>
+            {selectedLog.status === 'Failed' && selectedLog.error_details && (
+              <p><strong>Error:</strong> <span className="text-red-600">{selectedLog.error_details}</span></p>
+            )}
+          </div>
+          <div className="mt-4 pt-4 border-t">
+            <h4 className="font-semibold mb-2">Email Content:</h4>
+            {isFetchingBody ? (
+              <div className="flex items-center justify-center p-4">
+                <Loader2 className="w-6 h-6 animate-spin" />
+                <span className="ml-2">Loading content...</span>
+              </div>
+            ) : (
+              <div 
+                className="prose prose-sm max-w-none border p-3 rounded-md bg-gray-50 h-64 overflow-y-auto"
+                dangerouslySetInnerHTML={{ __html: selectedLog.body || '<p>No content available.</p>' }} 
+              />
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -852,6 +936,7 @@ const EmailManagement = () => {
         {activeTab === 'templates' && renderTemplatesView()}
         {activeTab === 'history' && renderHistoryView()}
       </div>
+      <LogDetailModal />
     </div>
   );
 };

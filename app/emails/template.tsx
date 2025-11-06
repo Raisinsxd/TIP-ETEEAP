@@ -40,7 +40,7 @@ export const EmailTemplate = ({ subject, body }: EmailTemplateProps) => (
         {/* 3. Header Section with Logo */}
         <Section style={header}>
           <Row>
-            <Column style={{ width: '100px', verticalAlign: 'middle' }}>
+            <Column style={{ width: '20%', maxWidth: '100px', verticalAlign: 'middle' }}>
               <Img
                 src={logoUrl}
                 width="100"
@@ -124,6 +124,7 @@ const container = {
   // Removed boxShadow for a simpler design
   margin: "40px auto",
   padding: "30px",
+  width: "100%",
   maxWidth: "580px",
 };
 

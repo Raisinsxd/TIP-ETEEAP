@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
         recipient: recipient,
         subject: subject,
         status: logStatus,
+        body: body, // Store the email body
         sender: FROM_EMAIL,
         error_details: errorMessage,
       });
