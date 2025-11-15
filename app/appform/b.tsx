@@ -25,7 +25,7 @@ export default function PersonalInformationForm({
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  // --- NEW: This function calculates age from a date string ---
+  // --- This function calculates age from a date string ---
   const calculateAge = (dateString: string): number => {
     if (!dateString) return 0;
     const today = new Date();
@@ -40,8 +40,7 @@ export default function PersonalInformationForm({
     return age;
   };
 
-  // --- NEW: Special handler for the date picker ---
-  // It updates both the birthDate and the calculated age
+  // --- Special handler for the date picker ---
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target; // name will be "birthDate"
     const calculatedAge = calculateAge(value);
@@ -58,15 +57,15 @@ export default function PersonalInformationForm({
   const validateAndProceed = () => {
     const newErrors: Record<string, string> = {};
     
-    // Read all fields from the 'personalInfo' object
     const { fullAddress, mobile, email, birthDate } = formData;
 
     if (!fullAddress?.trim()) newErrors.fullAddress = "Full address is required.";
 
+    // ✅ 2. VALIDATION UPDATED
     if (!mobile?.trim()) {
       newErrors.mobile = "Mobile number is required.";
-    } else if (!/^(09|\+639)\d{9}$/.test(mobile)) { // Use a regex for PH numbers
-       newErrors.mobile = "Please enter a valid PH mobile number (e.g., 09xxxxxxxxx).";
+    } else if (!/^09\d{9}$/.test(mobile)) { // Regex updated to only 11 digits
+        newErrors.mobile = "Please enter a valid 11-digit PH mobile number (e.g., 09xxxxxxxxx).";
     }
 
     if (!email?.trim()) {
@@ -75,7 +74,6 @@ export default function PersonalInformationForm({
       newErrors.email = "Please enter a valid email address.";
     }
 
-    // --- NEW: Validation for birthDate ---
     if (!birthDate?.trim()) {
       newErrors.birthDate = "Date of birth is required.";
     }
@@ -87,7 +85,7 @@ export default function PersonalInformationForm({
     }
   };
 
-  // --- This default object ensures formData.age exists on first render ---
+  // This default object ensures formData.age exists on first render
   const data = formData || { 
     fullAddress: "", 
     mobile: "", 
@@ -134,23 +132,27 @@ export default function PersonalInformationForm({
               name="mobile"
               type="tel"
               value={data.mobile || ""}
+              // ✅ 1. INPUT LOGIC UPDATED
               onChange={(e) => {
                 const value = e.target.value;
-                // Regex to allow only numbers (or an empty string)
+                // Regex to allow only numbers
                 const numericRegex = /^[0-9]*$/;
                 
-                // Only call the original handleChange if the new value is numeric
-                if (numericRegex.test(value)) {
+                // Only update state if value is numeric AND 11 digits or less
+                if (numericRegex.test(value) && value.length <= 11) {
                   handleChange(e);
                 }
               }}
-              maxLength={13} 
-              inputMode="numeric" // Added for better mobile UX
+              maxLength={11} // Updated to 11
+              inputMode="numeric"
               placeholder="09XXXXXXXXX"
               className={`w-full border rounded-lg p-2 text-black ${
                 errors.mobile ? "border-red-500" : "border-gray-400"
               }`}
             />
+            {errors.mobile && (
+               <p className="text-red-500 text-sm mt-1">{errors.mobile}</p>
+            )}
           </div>
 
           {/* Email */}
@@ -172,7 +174,7 @@ export default function PersonalInformationForm({
             )}
           </div>
 
-          {/* --- NEW: Date of Birth --- */}
+          {/* Date of Birth */}
           <div>
             <label className="block text-sm font-semibold text-black">
               Date of Birth:
@@ -181,8 +183,8 @@ export default function PersonalInformationForm({
               name="birthDate"
               type="date"
               value={data.birthDate || ""}
-              onChange={handleDateChange} // Use the special handler
-              max={new Date().toISOString().split("T")[0]} // Cannot be born in the future
+              onChange={handleDateChange}
+              max={new Date().toISOString().split("T")[0]}
               className={`w-full border rounded-lg p-2 text-black ${
                 errors.birthDate ? "border-red-500" : "border-gray-400"
               }`}
@@ -192,7 +194,7 @@ export default function PersonalInformationForm({
             )}
           </div>
 
-          {/* --- NEW: Age --- */}
+          {/* Age */}
           <div>
             <label className="block text-sm font-semibold text-black">
               Age:
@@ -201,7 +203,7 @@ export default function PersonalInformationForm({
               name="age"
               type="number"
               value={data.age || ""}
-              readOnly // Makes the input non-editable
+              readOnly
               placeholder="Age (auto-calculated)"
               className="w-full border rounded-lg p-2 text-black bg-gray-100 cursor-not-allowed"
             />
